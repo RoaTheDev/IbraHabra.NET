@@ -1,0 +1,6 @@
+@IbraHabra.NET_HostAddress = http://localhost:5254
+
+GET {{IbraHabra.NET_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
