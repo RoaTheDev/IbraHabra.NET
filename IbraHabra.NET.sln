@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IbraHabra.NET", "IbraHabra.NET.csproj", "{5A9802AF-B2DB-4E48-B3ED-3976AE44CB26}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IbraHabra.NET", "IbraHabra.csproj", "{5A9802AF-B2DB-4E48-B3ED-3976AE44CB26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

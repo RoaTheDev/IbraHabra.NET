@@ -1,9 +1,15 @@
+using Wolverine;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
+using var host = await Host.CreateDefaultBuilder()
+    .UseWolverine(opts =>
+    {
+        opts.Durability.Mode = DurabilityMode.MediatorOnly;
+    }).StartAsync();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
