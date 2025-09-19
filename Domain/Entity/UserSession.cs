@@ -5,8 +5,8 @@ public class UserSession
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public string SessionToken { get; set; } = Guid.NewGuid().ToString();
-    public string ClientId { get; set; } = string.Empty; // e.g., "myapp-ios"
-    public string DeviceInfo { get; set; } = string.Empty; // User-Agent
+    public string ClientId { get; set; } = string.Empty; 
+    public string DeviceInfo { get; set; } = string.Empty; 
     public string IpAddress { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
