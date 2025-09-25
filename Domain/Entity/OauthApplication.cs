@@ -2,11 +2,12 @@ using OpenIddict.EntityFrameworkCore.Models;
 
 namespace IbraHabra.NET.Domain.Entity;
 
-public class OauthApplication : OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddictEntityFrameworkCoreToken<Guid>>
+public class OauthApplication : OpenIddictEntityFrameworkCoreApplication
 {
+    // Your custom properties
     public Guid ProjectId { get; set; }
     public virtual Projects Projects { get; set; } = null!;
-
+    
     // 🔐 Auth Policies (per client)
     public int MinPasswordLength { get; set; } = 8;
     public bool RequireDigit { get; set; }
@@ -16,7 +17,6 @@ public class OauthApplication : OpenIddictEntityFrameworkCoreApplication<Guid, R
     public bool RequireMfa { get; set; }
 
     // 🌐 OAuth2 Settings
-
     public bool RequirePkce { get; set; } = true;
     public bool IsActive { get; set; } = true;
 

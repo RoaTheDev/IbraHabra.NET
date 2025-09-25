@@ -56,24 +56,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         builder.Entity<OpenIddictEntityFrameworkCoreScope>(e => { e.ToTable("oauth_scopes", "identity"); });
 
         builder.Entity<OpenIddictEntityFrameworkCoreToken>(e => { e.ToTable("oauth_tokens", "identity"); });
-        builder.Entity<OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddictEntityFrameworkCoreToken<Guid>>>()
-            .ToTable("oauth_application", "identity");
+
+        builder.Entity<OpenIddictEntityFrameworkCoreApplication>(e => { e.ToTable("oauth_applications", "identity"); });
+
         builder.Entity<OauthApplication>(e =>
         {
+            e.ToTable("oauth_applications", "identity",
+                t => t.HasCheckConstraint("CK_Client_MinPasswordLength", "\"MinPasswordLength\" >= 6")
+            ); // Same table!
+
             e.Property(f => f.ClientType)
                 .HasConversion<string>()
                 .IsRequired();
+
+            // ✅ Now this index is valid — both props in same table
             e.HasIndex(f => new { f.ProjectId, f.ClientType })
                 .IsUnique();
 
-            // Add foreign key relationship to Projects
             e.HasOne(oa => oa.Projects)
                 .WithMany(p => p.OauthApplications)
                 .HasForeignKey(oa => oa.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            e.ToTable(
-                t => { t.HasCheckConstraint("CK_Client_MinPasswordLength", "\"MinPasswordLength\" >= 6"); });
         });
     }
 

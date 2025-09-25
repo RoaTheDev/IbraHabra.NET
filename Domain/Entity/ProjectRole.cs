@@ -10,4 +10,6 @@ public class ProjectRole
 
     public virtual ICollection<ProjectRolePermission> ProjectRolePermissions { get; set; } =
         new List<ProjectRolePermission>();
+
+    public virtual ICollection<ProjectMember> ProjectMembers { get; set; } = new List<ProjectMember>();
 }

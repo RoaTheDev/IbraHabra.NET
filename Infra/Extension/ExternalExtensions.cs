@@ -1,7 +1,5 @@
-using IbraHabra.NET.Domain.Entity;
 using IbraHabra.NET.Infra.Persistent;
 using JasperFx.Core;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
 using Wolverine.ErrorHandling;
@@ -12,16 +10,14 @@ public static class ExternalExtensions
 {
     public static void AddDatabaseConfig(this IServiceCollection services, IConfiguration config)
     {
-        // services.AddDbContext<AppDbContext>(options =>
-        // {
-        //     options.UseNpgsql(config.GetConnectionString("CONNECTION_STR"));
-        //     options.UseOpenIddict();
-        //     
-        // });
         services.AddDbContext<AppDbContext>(opts =>
         {
-            var connectionString = config.GetConnectionString("DB_CONNECTION_STR");
-                                 
+            var connectionString =
+                $@"Server={Environment.GetEnvironmentVariable("DB_SERVER")};
+                   Database={Environment.GetEnvironmentVariable("DB_NAME")};
+                   User Id={Environment.GetEnvironmentVariable("DB_USER")};
+                   Password={Environment.GetEnvironmentVariable("DB_PASS")};";
+
             opts.UseNpgsql(connectionString, npgsqlOpts =>
             {
                 npgsqlOpts.EnableRetryOnFailure(
@@ -62,34 +58,19 @@ public static class ExternalExtensions
             .MoveToErrorQueue();
     });
 
-    public static void AddIdentityConfig(this IServiceCollection services, IConfiguration config)
+
+    public static void AddScalarConfig(this IServiceCollection services)
     {
-        services.AddIdentity<User, Role>(options =>
-            {
-                options.Password.RequireDigit = config.GetValue("Identity:Password:RequireDigit", true);
-                options.Password.RequireLowercase = config.GetValue("Identity:Password:RequireLowercase", true);
-                options.Password.RequireNonAlphanumeric =
-                    config.GetValue("Identity:Password:RequireNonAlphanumeric", true);
-                options.Password.RequireUppercase = config.GetValue("Identity:Password:RequireUppercase", true);
-                options.Password.RequiredLength = config.GetValue("Identity:Password:RequiredLength", 8);
-                options.Password.RequiredUniqueChars = config.GetValue("Identity:Password:RequiredUniqueChars", 1);
+        services.AddTransient<OpenApiTransformer>();
+        services.AddOpenApi(options =>
+        {
+            var sp = services.BuildServiceProvider(); 
+            var transformer = sp.GetRequiredService<OpenApiTransformer>();
 
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.AllowedForNewUsers = true;
+            options.AddDocumentTransformer((document, context, cancellationToken) =>
+                    transformer.TransformAsync(document, context, cancellationToken) 
+            );
+        });
 
-                options.SignIn.RequireConfirmedEmail =
-                    config.GetValue("Identity:Login:Require_Email_Confirmation", true);
-                options.SignIn.RequireConfirmedPhoneNumber =
-                    config.GetValue("Identity:Login:Require_PhoneNumber_Confirmation", false);
-                options.SignIn.RequireConfirmedAccount =
-                    config.GetValue("Identity:Login:Require_Account_Confirmation", false);
-                Console.WriteLine(options.SignIn);
-            })
-            .AddEntityFrameworkStores<AppDbContext>()
-            .AddApiEndpoints()
-            .AddDefaultTokenProviders();
     }
-    
-    
 }
