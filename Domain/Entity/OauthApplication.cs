@@ -1,20 +1,14 @@
+using IbraHabra.NET.Domain.Interface;
 using OpenIddict.EntityFrameworkCore.Models;
 
 namespace IbraHabra.NET.Domain.Entity;
 
-public class OauthApplication : OpenIddictEntityFrameworkCoreApplication
+public class OauthApplication : OpenIddictEntityFrameworkCoreApplication, IEntity<string>
 {
-    // Your custom properties
+    public override string Id => base.Id!;
+
     public Guid ProjectId { get; set; }
     public virtual Projects Projects { get; set; } = null!;
-    
-    // 🔐 Auth Policies (per client)
-    public int MinPasswordLength { get; set; } = 8;
-    public bool RequireDigit { get; set; }
-    public bool RequireUppercase { get; set; }
-    public bool RequireNonAlphanumeric { get; set; }
-    public bool RequireEmailVerification { get; set; }
-    public bool RequireMfa { get; set; }
 
     // 🌐 OAuth2 Settings
     public bool RequirePkce { get; set; } = true;

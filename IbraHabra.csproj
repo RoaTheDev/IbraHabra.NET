@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="dotenv.net" Version="4.0.0" />
+        <PackageReference Include="FluentValidation" Version="12.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
@@ -32,12 +33,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Adapter\" />
-      <Folder Include="Application\Commands\" />
-      <Folder Include="Application\Dto\Request\" />
-      <Folder Include="Application\Dto\Response\" />
-      <Folder Include="Application\Handlers\" />
-      <Folder Include="Application\Queries\" />
       <Folder Include="Infra\Migrations\" />
     </ItemGroup>
 

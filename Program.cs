@@ -5,11 +5,12 @@ using Scalar.AspNetCore;
 
 DotEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.AddWolverineConfig();
 
 var config = builder.Configuration;
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddDatabaseConfig(config);
 builder.Services.AddOpenIdDictConfig();
-builder.Host.AddWolverineConfig();
 builder.Services.AddScalarConfig();
 builder.Services.AddIdentityConfig(config);
 builder.Services.AddHttpContextAccessor();
@@ -18,9 +19,9 @@ var app = builder.Build();
 
 
 if (app.Environment.IsDevelopment())
-{ 
+{
     app.MapOpenApi();
-    app.MapScalarApiReference();;
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();

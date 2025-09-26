@@ -126,7 +126,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.Entity<ProjectMember>(e =>
         {
-            e.HasKey(pm => new { pm.ProjectId, pm.UserId });
+            e.HasKey(pm => new ProjectMemberId(pm.ProjectId, pm.UserId));
 
             // Relationships
             e.HasOne(pm => pm.Projects)
@@ -174,10 +174,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.Entity<ProjectRolePermission>(e =>
         {
-            e.HasKey(f => new
-            {
-                f.ProjectRoleId, f.PermissionId
-            });
+            e.HasKey(f => new ProjectRolePermissionId(f.ProjectRoleId, f.PermissionId));
 
 
             e.HasOne(prp => prp.ProjectRole)

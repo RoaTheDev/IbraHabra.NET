@@ -1,6 +1,8 @@
+using IbraHabra.NET.Domain.Interface;
+
 namespace IbraHabra.NET.Domain.Entity;
 
-public class UserAuditTrail
+public class UserAuditTrail : IEntity<Guid>
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }

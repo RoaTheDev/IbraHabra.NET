@@ -1,12 +1,14 @@
+using IbraHabra.NET.Domain.Interface;
+
 namespace IbraHabra.NET.Domain.Entity;
 
-public class UserSession
+public class UserSession : IEntity<Guid>
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public string SessionToken { get; set; } = Guid.NewGuid().ToString();
-    public string ClientId { get; set; } = string.Empty; 
-    public string DeviceInfo { get; set; } = string.Empty; 
+    public string ClientId { get; set; } = string.Empty;
+    public string DeviceInfo { get; set; } = string.Empty;
     public string IpAddress { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

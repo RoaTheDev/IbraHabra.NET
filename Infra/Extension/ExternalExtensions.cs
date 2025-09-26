@@ -1,3 +1,4 @@
+using IbraHabra.NET.Infra.Docs;
 using IbraHabra.NET.Infra.Persistent;
 using JasperFx.Core;
 using Microsoft.EntityFrameworkCore;

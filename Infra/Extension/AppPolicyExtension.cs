@@ -35,7 +35,6 @@ public static class AppPolicyExtension
                 Console.WriteLine(options.SignIn);
             })
             .AddEntityFrameworkStores<AppDbContext>()
-            .AddApiEndpoints()
             .AddDefaultTokenProviders();
     }
 

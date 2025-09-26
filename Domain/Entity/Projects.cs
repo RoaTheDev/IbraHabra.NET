@@ -1,8 +1,9 @@
 using System.Collections;
+using IbraHabra.NET.Domain.Interface;
 
 namespace IbraHabra.NET.Domain.Entity;
 
-public class Projects
+public class Projects: IEntity<Guid>
 {
     public Guid Id { get; set; }
     public string DisplayName { get; set; } = null!;

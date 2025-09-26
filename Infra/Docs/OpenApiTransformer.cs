@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using OpenIddict.Server;
 
-namespace IbraHabra.NET.Infra;
+namespace IbraHabra.NET.Infra.Docs;
 
 public class OpenApiTransformer : IOpenApiDocumentTransformer
 {
