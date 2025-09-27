@@ -1,5 +1,4 @@
 using FluentValidation;
-using IbraHabra.NET.Application.Helper;
 using IbraHabra.NET.Application.UseCases.Users;
 using IbraHabra.NET.Domain.Entity;
 using IbraHabra.NET.Domain.ValueObject;
@@ -25,6 +24,7 @@ public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
 
         RuleFor(x => x.FirstName).MaximumLength(50);
         RuleFor(x => x.LastName).MaximumLength(50);
+        RuleFor(x => x.ClientId).NotEmpty();
     }
 
     private async Task<bool> MeetPasswordPolicy(RegisterUserCommand command, string password, CancellationToken token)
@@ -33,9 +33,12 @@ public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
             .FirstOrDefaultAsync(c => c.ClientId == command.ClientId && c.IsActive, token);
 
         if (client == null) return false;
+
+        // Extract the policy directly from the Properties JSON field
         var policy = client.GetAuthPolicy();
         return ValidatePasswordAgainstPolicy(password, policy);
     }
+
 
     private static bool ValidatePasswordAgainstPolicy(string password, AuthPolicy policy)
     {

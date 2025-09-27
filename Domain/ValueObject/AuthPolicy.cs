@@ -8,4 +8,6 @@ public class AuthPolicy
     public bool RequireNonAlphanumeric { get; set; } = false;
     public bool RequireEmailVerification { get; set; } = false;
     public bool RequireMfa { get; set; } = false;
+    
+    public bool RequirePkce { get; set; } = true;
 }

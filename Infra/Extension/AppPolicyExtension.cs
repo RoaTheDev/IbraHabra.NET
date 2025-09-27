@@ -118,10 +118,8 @@ public static class AppPolicyExtension
                         if (string.Equals(await manager.GetStatusAsync(token, CancellationToken.None),
                                 OpenIddictConstants.Statuses.Redeemed, StringComparison.Ordinal))
                         {
-                            // 🚨 SECURITY ALERT: Possible token theft
                             await manager.TryRevokeAsync(token, CancellationToken.None);
 
-                            // Optionally revoke all tokens for this subject
                             var subject = await manager.GetSubjectAsync(token, CancellationToken.None);
                             if (subject != null)
                                 await foreach (var t in manager.FindBySubjectAsync(subject, CancellationToken.None))
