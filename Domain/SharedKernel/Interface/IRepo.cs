@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Query;
 
-namespace IbraHabra.NET.Domain.Interface;
+namespace IbraHabra.NET.Domain.SharedKernel.Interface;
 
 public interface IRepo<TEntity, in TKey>
 {

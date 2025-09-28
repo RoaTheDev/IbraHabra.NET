@@ -1,6 +1,6 @@
 using System.Text.Json;
-using IbraHabra.NET.Domain.Interface;
-using IbraHabra.NET.Domain.ValueObject;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
+using IbraHabra.NET.Domain.SharedKernel.ValueObject;
 using OpenIddict.Abstractions;
 using OpenIddict.EntityFrameworkCore.Models;
 
@@ -8,7 +8,7 @@ namespace IbraHabra.NET.Domain.Entity;
 
 public class OauthApplication : OpenIddictEntityFrameworkCoreApplication, IEntity<string>
 {
-    public override string Id => base.Id!;
+    public override string Id { get; set; } = null!;
 
     public Guid ProjectId { get; set; }
     public virtual Projects Projects { get; set; } = null!;
@@ -36,11 +36,11 @@ public class OauthApplication : OpenIddictEntityFrameworkCoreApplication, IEntit
         }
         catch (JsonException)
         {
-            // Log the exception if needed
         }
 
         return new AuthPolicy();
     }
+
     public async Task<AuthPolicy> GetAuthPolicy(IOpenIddictApplicationManager manager,
         CancellationToken cancellationToken = default)
     {

@@ -1,4 +1,4 @@
-namespace IbraHabra.NET.Domain.enums;
+namespace IbraHabra.NET.Domain.SharedKernel.enums;
 
 public enum ClientTypeEnum
 {

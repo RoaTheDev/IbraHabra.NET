@@ -1,10 +1,10 @@
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Services;
 using IbraHabra.NET.Domain.Entity;
-using IbraHabra.NET.Domain.Interface;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 using System.Text.Json;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
 
 namespace IbraHabra.NET.Application.UseCases.Users;
 

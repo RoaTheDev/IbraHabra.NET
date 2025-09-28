@@ -1,4 +1,4 @@
-namespace IbraHabra.NET.Domain.ValueObject;
+namespace IbraHabra.NET.Domain.SharedKernel.ValueObject;
 
 public class AuthPolicy
 {

@@ -1,6 +1,6 @@
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Domain.Entity;
-using IbraHabra.NET.Domain.Interface;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
 using ImTools;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;

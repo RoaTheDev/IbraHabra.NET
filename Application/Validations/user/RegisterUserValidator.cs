@@ -1,11 +1,11 @@
 using FluentValidation;
 using IbraHabra.NET.Application.UseCases.Users;
 using IbraHabra.NET.Domain.Entity;
-using IbraHabra.NET.Domain.ValueObject;
+using IbraHabra.NET.Domain.SharedKernel.ValueObject;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
 
-namespace IbraHabra.NET.Application.Validations;
+namespace IbraHabra.NET.Application.Validations.user;
 
 public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
 {
@@ -16,7 +16,9 @@ public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
         _context = context;
 
         RuleFor(x => x.Email)
-            .NotEmpty().EmailAddress();
+            .NotEmpty()
+            .WithMessage("Email cannot be null or empty.")
+            .EmailAddress().WithMessage("Must be a valid email address.");
 
         RuleFor(x => x.Password)
             .NotEmpty()

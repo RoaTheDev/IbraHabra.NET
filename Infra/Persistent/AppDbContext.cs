@@ -36,7 +36,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
     private void ConfigureIdentity(ModelBuilder builder)
     {
-        builder.Entity<User>().ToTable("users", "identity");
+        builder.Entity<User>(e =>
+        {
+            e.ToTable("users", "identity");
+            e.Property(f => f.FirstName).HasMaxLength(50);
+            e.Property(f => f.LastName).HasMaxLength(50);
+        });
         builder.Entity<Role>().ToTable("roles", "identity");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("user_roles", "identity");
         builder.Entity<IdentityUserClaim<Guid>>().ToTable("user_claims", "identity");
@@ -49,35 +54,41 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.UseOpenIddict();
 
-        builder.Entity<OpenIddictEntityFrameworkCoreAuthorization>(e =>
-        {
-            e.ToTable("oauth_authorizations", "identity");
-        });
-        builder.Entity<OpenIddictEntityFrameworkCoreScope>(e => { e.ToTable("oauth_scopes", "identity"); });
-
-        builder.Entity<OpenIddictEntityFrameworkCoreToken>(e => { e.ToTable("oauth_tokens", "identity"); });
-
-        builder.Entity<OpenIddictEntityFrameworkCoreApplication>(e => { e.ToTable("oauth_applications", "identity"); });
-
+        // Configure your custom entity - it will inherit from OpenIddictEntityFrameworkCoreApplication
         builder.Entity<OauthApplication>(e =>
         {
             e.ToTable("oauth_applications", "identity",
-                t => t.HasCheckConstraint("CK_Client_MinPasswordLength", "\"MinPasswordLength\" >= 6")
-            ); // Same table!
+                tb => tb.HasCheckConstraint("CK_Client_MinPasswordLength",
+                    "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND " +
+                    "(\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6"));
 
             e.Property(f => f.ClientType)
                 .HasConversion<string>()
                 .IsRequired();
 
-            // ✅ Now this index is valid — both props in same table
+            // Add check constraint for auth policy
+
+
+            // Index on ProjectId and ClientType
             e.HasIndex(f => new { f.ProjectId, f.ClientType })
                 .IsUnique();
 
+            // Relationships
             e.HasOne(oa => oa.Projects)
                 .WithMany(p => p.OauthApplications)
                 .HasForeignKey(oa => oa.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // Configure other OpenIddict entities
+        builder.Entity<OpenIddictEntityFrameworkCoreAuthorization>(e =>
+        {
+            e.ToTable("oauth_authorizations", "identity");
+        });
+
+        builder.Entity<OpenIddictEntityFrameworkCoreScope>(e => { e.ToTable("oauth_scopes", "identity"); });
+
+        builder.Entity<OpenIddictEntityFrameworkCoreToken>(e => { e.ToTable("oauth_tokens", "identity"); });
     }
 
     private void ConfigureAvailableScope(ModelBuilder builder)
@@ -199,10 +210,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(f => f.Id).ValueGeneratedOnAdd();
             e.Property(f => f.HomePageUrl).HasMaxLength(255).IsRequired();
             e.Property(f => f.LogoUrl).HasMaxLength(255).IsRequired(false);
-            e.Property(f => f.Description).HasMaxLength(250).IsRequired(false);
+            e.Property(f => f.Description).HasMaxLength(255).IsRequired(false);
             e.Property(f => f.DisplayName).HasMaxLength(50).IsRequired();
-
-            // Add unique constraint on display name
+            
             e.HasIndex(f => f.DisplayName).IsUnique();
 
             e.ToTable("projects", "realms");
@@ -245,20 +255,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.HasKey(f => f.Id);
             e.Property(f => f.Id).ValueGeneratedOnAdd();
-            e.Property(f => f.UserId).IsRequired(); // Remove HasMaxLength for Guid
+            e.Property(f => f.UserId).IsRequired(); 
             e.Property(f => f.SessionToken).HasMaxLength(255).IsRequired();
             e.Property(f => f.ClientId).HasMaxLength(255).IsRequired();
             e.Property(f => f.DeviceInfo).HasMaxLength(500).IsRequired();
             e.Property(f => f.IpAddress).HasMaxLength(150).IsRequired();
             e.Property(f => f.Country).HasMaxLength(100).IsRequired();
 
-            // Add foreign key relationship to User
             e.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(us => us.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Add indexes for performance
             e.HasIndex(f => f.SessionToken).IsUnique();
             e.HasIndex(f => new { f.UserId, f.IsCurrent });
 

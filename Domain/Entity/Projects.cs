@@ -1,5 +1,5 @@
 using System.Collections;
-using IbraHabra.NET.Domain.Interface;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
 
 namespace IbraHabra.NET.Domain.Entity;
 

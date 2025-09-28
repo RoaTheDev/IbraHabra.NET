@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using FastExpressionCompiler;
-using IbraHabra.NET.Domain.Interface;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;

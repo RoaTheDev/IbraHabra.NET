@@ -1,4 +1,4 @@
-using IbraHabra.NET.Domain.Interface;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
 using IbraHabra.NET.Infra.Repo;
 
 namespace IbraHabra.NET.Infra.Extension;
