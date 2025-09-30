@@ -5,7 +5,7 @@ using ImTools;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 
-namespace IbraHabra.NET.Application.UseCases.Users;
+namespace IbraHabra.NET.Application.UseCases.Users.Commands;
 
 public record ConfirmEmailCommand(string Email, string Token, string ClientId);
 

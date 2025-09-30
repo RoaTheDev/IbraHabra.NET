@@ -16,7 +16,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 table: "user_role");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_user_role_users_UserId",
+                name: "FK_user_role_Users.Commands_UserId",
                 schema: "identity",
                 table: "user_role");
 
@@ -54,12 +54,12 @@ namespace IbraHabra.NET.Infra.Migrations
                 onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_user_roles_users_UserId",
+                name: "FK_user_roles_Users.Commands_UserId",
                 schema: "identity",
                 table: "user_roles",
                 column: "UserId",
                 principalSchema: "identity",
-                principalTable: "users",
+                principalTable: "Users.Commands",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }
@@ -73,7 +73,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 table: "user_roles");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_user_roles_users_UserId",
+                name: "FK_user_roles_Users.Commands_UserId",
                 schema: "identity",
                 table: "user_roles");
 
@@ -111,12 +111,12 @@ namespace IbraHabra.NET.Infra.Migrations
                 onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_user_role_users_UserId",
+                name: "FK_user_role_Users.Commands_UserId",
                 schema: "identity",
                 table: "user_role",
                 column: "UserId",
                 principalSchema: "identity",
-                principalTable: "users",
+                principalTable: "Users.Commands",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }

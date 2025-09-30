@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
 using Wolverine;
 
-namespace IbraHabra.NET.Application.UseCases.Users;
+namespace IbraHabra.NET.Application.UseCases.Users.Commands;
 
 public record LogoutUserCommand(Guid? UserId, string ClientId, bool RevokeAllTokens = false);
 

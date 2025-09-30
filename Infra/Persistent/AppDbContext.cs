@@ -38,7 +38,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.Entity<User>(e =>
         {
-            e.ToTable("users", "identity");
+            e.ToTable("Users.Commands", "identity");
             e.Property(f => f.FirstName).HasMaxLength(50);
             e.Property(f => f.LastName).HasMaxLength(50);
         });

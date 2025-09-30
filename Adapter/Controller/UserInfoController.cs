@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 
-namespace IbraHabra.NET.Adapter;
+namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 public class UserInfoController : ControllerBase

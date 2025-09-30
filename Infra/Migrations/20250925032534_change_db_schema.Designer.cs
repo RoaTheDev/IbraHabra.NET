@@ -296,7 +296,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("users", "identity");
+                    b.ToTable("Users.Commands", "identity");
                 });
 
             modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserAuditTrail", b =>
@@ -374,7 +374,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("user_audit_trails", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Users.Commandsession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -884,7 +884,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Users.Commandsession", b =>
                 {
                     b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
                         .WithMany()

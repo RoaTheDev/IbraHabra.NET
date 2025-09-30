@@ -1,11 +1,10 @@
 using FluentValidation;
-using IbraHabra.NET.Application.UseCases.Users;
 using IbraHabra.NET.Domain.Entity;
 using IbraHabra.NET.Domain.SharedKernel.ValueObject;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
 
-namespace IbraHabra.NET.Application.Validations.user;
+namespace IbraHabra.NET.Application.UseCases.Users.Commands.RegisterUser;
 
 public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
 {

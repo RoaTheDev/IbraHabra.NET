@@ -5,7 +5,7 @@ using IbraHabra.NET.Domain.SharedKernel.Interface;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 
-namespace IbraHabra.NET.Application.UseCases.Users;
+namespace IbraHabra.NET.Application.UseCases.Users.Commands;
 
 public record SendConfirmationEmailCommand(string Email, string ClientId);
 

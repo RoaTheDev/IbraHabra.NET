@@ -1,12 +1,12 @@
+using System.Text.Json;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Services;
 using IbraHabra.NET.Domain.Entity;
+using IbraHabra.NET.Domain.SharedKernel.Interface;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
-using System.Text.Json;
-using IbraHabra.NET.Domain.SharedKernel.Interface;
 
-namespace IbraHabra.NET.Application.UseCases.Users;
+namespace IbraHabra.NET.Application.UseCases.Users.Commands.RegisterUser;
 
 public record RegisterUserCommand(string Email, string Password, string? FirstName, string? LastName, string ClientId);
 

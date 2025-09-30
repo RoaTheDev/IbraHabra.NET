@@ -125,7 +125,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "users",
+                name: "Users.Commands",
                 schema: "identity",
                 columns: table => new
                 {
@@ -149,7 +149,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_users", x => x.Id);
+                    table.PrimaryKey("PK_Users.Commands", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -320,10 +320,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_audit_trails", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_user_audit_trails_users_UserId",
+                        name: "FK_user_audit_trails_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -343,10 +343,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_claims", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_user_claims_users_UserId",
+                        name: "FK_user_claims_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -365,10 +365,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_logins", x => new { x.LoginProvider, x.ProviderKey });
                     table.ForeignKey(
-                        name: "FK_user_logins_users_UserId",
+                        name: "FK_user_logins_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -395,10 +395,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_sessions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_user_sessions_users_UserId",
+                        name: "FK_user_sessions_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -417,10 +417,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_tokens", x => new { x.UserId, x.LoginProvider, x.Name });
                     table.ForeignKey(
-                        name: "FK_user_tokens_users_UserId",
+                        name: "FK_user_tokens_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -552,10 +552,10 @@ namespace IbraHabra.NET.Infra.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_project_members_users_UserId",
+                        name: "FK_project_members_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -629,10 +629,10 @@ namespace IbraHabra.NET.Infra.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_user_role_users_UserId",
+                        name: "FK_user_role_Users.Commands_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "users",
+                        principalTable: "Users.Commands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -813,13 +813,13 @@ namespace IbraHabra.NET.Infra.Migrations
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 schema: "identity",
-                table: "users",
+                table: "Users.Commands",
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 schema: "identity",
-                table: "users",
+                table: "Users.Commands",
                 column: "NormalizedUserName",
                 unique: true);
         }
@@ -898,7 +898,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 schema: "identity");
 
             migrationBuilder.DropTable(
-                name: "users",
+                name: "Users.Commands",
                 schema: "identity");
 
             migrationBuilder.DropTable(
