@@ -3,6 +3,7 @@ using IbraHabra.NET.Infra.Persistent;
 using JasperFx.Core;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
+using Wolverine.EntityFrameworkCore;
 using Wolverine.ErrorHandling;
 
 namespace IbraHabra.NET.Infra.Extension;
@@ -40,7 +41,7 @@ public static class ExternalExtensions
             opts.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 
             opts.UseLazyLoadingProxies();
-        });
+        }, ServiceLifetime.Singleton);
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");
@@ -50,6 +51,7 @@ public static class ExternalExtensions
     {
         opts.Durability.Mode = DurabilityMode.MediatorOnly;
 
+        opts.UseEntityFrameworkCoreTransactions();
         opts.Policies.AutoApplyTransactions();
 
         opts.Policies.OnException<InvalidOperationException>()
@@ -65,13 +67,12 @@ public static class ExternalExtensions
         services.AddTransient<OpenApiTransformer>();
         services.AddOpenApi(options =>
         {
-            var sp = services.BuildServiceProvider(); 
+            var sp = services.BuildServiceProvider();
             var transformer = sp.GetRequiredService<OpenApiTransformer>();
 
             options.AddDocumentTransformer((document, context, cancellationToken) =>
-                    transformer.TransformAsync(document, context, cancellationToken) 
+                transformer.TransformAsync(document, context, cancellationToken)
             );
         });
-
     }
 }

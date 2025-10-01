@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IbraHabra.NET.Infra.Migrations
 {
     /// <inheritdoc />
-    public partial class InitAdd : Migration
+    public partial class initdb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -46,7 +46,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     ApplicationType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     ClientId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ClientSecret = table.Column<string>(type: "text", nullable: true),
-                    ClientType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ClientType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     ConcurrencyToken = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     ConsentType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     DisplayName = table.Column<string>(type: "text", nullable: true),
@@ -54,7 +54,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     JsonWebKeySet = table.Column<string>(type: "text", nullable: true),
                     Permissions = table.Column<string>(type: "text", nullable: true),
                     PostLogoutRedirectUris = table.Column<string>(type: "text", nullable: true),
-                    Properties = table.Column<string>(type: "text", nullable: true),
+                    Properties = table.Column<string>(type: "jsonb", nullable: true),
                     RedirectUris = table.Column<string>(type: "text", nullable: true),
                     Requirements = table.Column<string>(type: "text", nullable: true),
                     Settings = table.Column<string>(type: "text", nullable: true)
@@ -62,32 +62,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OpenIddictApplications", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "OpenIddictEntityFrameworkCoreApplication<Guid>",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ApplicationType = table.Column<string>(type: "text", nullable: true),
-                    ClientId = table.Column<string>(type: "text", nullable: true),
-                    ClientSecret = table.Column<string>(type: "text", nullable: true),
-                    ClientType = table.Column<string>(type: "text", nullable: true),
-                    ConcurrencyToken = table.Column<string>(type: "text", nullable: true),
-                    ConsentType = table.Column<string>(type: "text", nullable: true),
-                    DisplayName = table.Column<string>(type: "text", nullable: true),
-                    DisplayNames = table.Column<string>(type: "text", nullable: true),
-                    JsonWebKeySet = table.Column<string>(type: "text", nullable: true),
-                    Permissions = table.Column<string>(type: "text", nullable: true),
-                    PostLogoutRedirectUris = table.Column<string>(type: "text", nullable: true),
-                    Properties = table.Column<string>(type: "text", nullable: true),
-                    RedirectUris = table.Column<string>(type: "text", nullable: true),
-                    Requirements = table.Column<string>(type: "text", nullable: true),
-                    Settings = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OpenIddictEntityFrameworkCoreApplication<Guid>", x => x.Id);
+                    table.CheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
                 });
 
             migrationBuilder.CreateTable(
@@ -110,7 +85,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     DisplayName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     LogoUrl = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     HomePageUrl = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     AllowRegistration = table.Column<bool>(type: "boolean", nullable: false),
@@ -125,11 +100,30 @@ namespace IbraHabra.NET.Infra.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Users.Commands",
+                name: "roles",
                 schema: "identity",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_roles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "users",
+                schema: "identity",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    LastName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -149,7 +143,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Users.Commands", x => x.Id);
+                    table.PrimaryKey("PK_users", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -178,30 +172,6 @@ namespace IbraHabra.NET.Infra.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "OpenIddictEntityFrameworkCoreAuthorization<Guid>",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ApplicationId = table.Column<Guid>(type: "uuid", nullable: true),
-                    ConcurrencyToken = table.Column<string>(type: "text", nullable: true),
-                    CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Properties = table.Column<string>(type: "text", nullable: true),
-                    Scopes = table.Column<string>(type: "text", nullable: true),
-                    Status = table.Column<string>(type: "text", nullable: true),
-                    Subject = table.Column<string>(type: "text", nullable: true),
-                    Type = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OpenIddictEntityFrameworkCoreAuthorization<Guid>", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_OpenIddictEntityFrameworkCoreAuthorization<Guid>_OpenIddict~",
-                        column: x => x.ApplicationId,
-                        principalTable: "OpenIddictEntityFrameworkCoreApplication<Guid>",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "available_scopes",
                 schema: "realms",
                 columns: table => new
@@ -226,45 +196,27 @@ namespace IbraHabra.NET.Infra.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "oauth_application",
+                name: "oauth_applications",
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ApplicationType = table.Column<string>(type: "text", nullable: true),
-                    ClientId = table.Column<string>(type: "text", nullable: true),
-                    ClientSecret = table.Column<string>(type: "text", nullable: true),
-                    ClientType = table.Column<string>(type: "text", nullable: false),
-                    ConcurrencyToken = table.Column<string>(type: "text", nullable: true),
-                    ConsentType = table.Column<string>(type: "text", nullable: true),
-                    DisplayName = table.Column<string>(type: "text", nullable: true),
-                    DisplayNames = table.Column<string>(type: "text", nullable: true),
-                    JsonWebKeySet = table.Column<string>(type: "text", nullable: true),
-                    Permissions = table.Column<string>(type: "text", nullable: true),
-                    PostLogoutRedirectUris = table.Column<string>(type: "text", nullable: true),
-                    Properties = table.Column<string>(type: "text", nullable: true),
-                    RedirectUris = table.Column<string>(type: "text", nullable: true),
-                    Requirements = table.Column<string>(type: "text", nullable: true),
-                    Settings = table.Column<string>(type: "text", nullable: true),
-                    Discriminator = table.Column<string>(type: "character varying(144)", maxLength: 144, nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
-                    MinPasswordLength = table.Column<int>(type: "integer", nullable: true),
-                    RequireDigit = table.Column<bool>(type: "boolean", nullable: true),
-                    RequireUppercase = table.Column<bool>(type: "boolean", nullable: true),
-                    RequireNonAlphanumeric = table.Column<bool>(type: "boolean", nullable: true),
-                    RequireEmailVerification = table.Column<bool>(type: "boolean", nullable: true),
-                    RequireMfa = table.Column<bool>(type: "boolean", nullable: true),
-                    RequirePkce = table.Column<bool>(type: "boolean", nullable: true),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_oauth_application", x => x.Id);
-                    table.CheckConstraint("CK_Client_MinPasswordLength", "\"MinPasswordLength\" >= 6");
+                    table.PrimaryKey("PK_oauth_applications", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_oauth_application_projects_ProjectId",
+                        name: "FK_oauth_applications_OpenIddictApplications_Id",
+                        column: x => x.Id,
+                        principalTable: "OpenIddictApplications",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_oauth_applications_projects_ProjectId",
                         column: x => x.ProjectId,
                         principalSchema: "realms",
                         principalTable: "projects",
@@ -295,6 +247,29 @@ namespace IbraHabra.NET.Infra.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "role_claims",
+                schema: "identity",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_role_claims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_role_claims_roles_RoleId",
+                        column: x => x.RoleId,
+                        principalSchema: "identity",
+                        principalTable: "roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "user_audit_trails",
                 schema: "realms",
                 columns: table => new
@@ -320,10 +295,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_audit_trails", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_user_audit_trails_Users.Commands_UserId",
+                        name: "FK_user_audit_trails_users_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "Users.Commands",
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -343,10 +318,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_claims", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_user_claims_Users.Commands_UserId",
+                        name: "FK_user_claims_users_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "Users.Commands",
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -365,10 +340,37 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_logins", x => new { x.LoginProvider, x.ProviderKey });
                     table.ForeignKey(
-                        name: "FK_user_logins_Users.Commands_UserId",
+                        name: "FK_user_logins_users_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "Users.Commands",
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "user_roles",
+                schema: "identity",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_roles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_user_roles_roles_RoleId",
+                        column: x => x.RoleId,
+                        principalSchema: "identity",
+                        principalTable: "roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_user_roles_users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "identity",
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -395,10 +397,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_sessions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_user_sessions_Users.Commands_UserId",
+                        name: "FK_user_sessions_users_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "Users.Commands",
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -417,10 +419,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 {
                     table.PrimaryKey("PK_user_tokens", x => new { x.UserId, x.LoginProvider, x.Name });
                     table.ForeignKey(
-                        name: "FK_user_tokens_Users.Commands_UserId",
+                        name: "FK_user_tokens_users_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "Users.Commands",
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -461,70 +463,6 @@ namespace IbraHabra.NET.Infra.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "OpenIddictEntityFrameworkCoreToken<Guid>",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    OpenIddictEntityFrameworkCoreApplicationGuidRoleOpenIddic = table.Column<Guid>(name: "OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddic~", type: "uuid", nullable: true),
-                    ApplicationId = table.Column<Guid>(type: "uuid", nullable: true),
-                    AuthorizationId = table.Column<Guid>(type: "uuid", nullable: true),
-                    ConcurrencyToken = table.Column<string>(type: "text", nullable: true),
-                    CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Payload = table.Column<string>(type: "text", nullable: true),
-                    Properties = table.Column<string>(type: "text", nullable: true),
-                    RedemptionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ReferenceId = table.Column<string>(type: "text", nullable: true),
-                    Status = table.Column<string>(type: "text", nullable: true),
-                    Subject = table.Column<string>(type: "text", nullable: true),
-                    Type = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OpenIddictEntityFrameworkCoreToken<Guid>", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_OpenIddictEntityFrameworkCoreToken<Guid>_OpenIddictEntityFr~",
-                        column: x => x.ApplicationId,
-                        principalTable: "OpenIddictEntityFrameworkCoreApplication<Guid>",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_OpenIddictEntityFrameworkCoreToken<Guid>_OpenIddictEntityF~1",
-                        column: x => x.AuthorizationId,
-                        principalTable: "OpenIddictEntityFrameworkCoreAuthorization<Guid>",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_OpenIddictEntityFrameworkCoreToken<Guid>_oauth_application_~",
-                        column: x => x.OpenIddictEntityFrameworkCoreApplicationGuidRoleOpenIddic,
-                        principalSchema: "identity",
-                        principalTable: "oauth_application",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "roles",
-                schema: "identity",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    OpenIddictEntityFrameworkCoreApplicationGuidRoleOpenIddic = table.Column<Guid>(name: "OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddic~", type: "uuid", nullable: true),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_roles", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_roles_oauth_application_OpenIddictEntityFrameworkCoreApplic~",
-                        column: x => x.OpenIddictEntityFrameworkCoreApplicationGuidRoleOpenIddic,
-                        principalSchema: "identity",
-                        principalTable: "oauth_application",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "project_members",
                 schema: "realms",
                 columns: table => new
@@ -552,10 +490,10 @@ namespace IbraHabra.NET.Infra.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_project_members_Users.Commands_UserId",
+                        name: "FK_project_members_users_UserId",
                         column: x => x.UserId,
                         principalSchema: "identity",
-                        principalTable: "Users.Commands",
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -587,56 +525,6 @@ namespace IbraHabra.NET.Infra.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "role_claims",
-                schema: "identity",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_role_claims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_role_claims_roles_RoleId",
-                        column: x => x.RoleId,
-                        principalSchema: "identity",
-                        principalTable: "roles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "user_role",
-                schema: "identity",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_user_role", x => new { x.UserId, x.RoleId });
-                    table.ForeignKey(
-                        name: "FK_user_role_roles_RoleId",
-                        column: x => x.RoleId,
-                        principalSchema: "identity",
-                        principalTable: "roles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_user_role_Users.Commands_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "identity",
-                        principalTable: "Users.Commands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_available_scopes_ProjectId_Name",
                 schema: "realms",
@@ -645,11 +533,10 @@ namespace IbraHabra.NET.Infra.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_oauth_application_ProjectId_ClientType",
+                name: "IX_oauth_applications_ProjectId",
                 schema: "identity",
-                table: "oauth_application",
-                columns: new[] { "ProjectId", "ClientType" },
-                unique: true);
+                table: "oauth_applications",
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_oauth_authorizations_ApplicationId_Status_Subject_Type",
@@ -688,26 +575,6 @@ namespace IbraHabra.NET.Infra.Migrations
                 table: "OpenIddictApplications",
                 column: "ClientId",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OpenIddictEntityFrameworkCoreAuthorization<Guid>_Applicatio~",
-                table: "OpenIddictEntityFrameworkCoreAuthorization<Guid>",
-                column: "ApplicationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OpenIddictEntityFrameworkCoreToken<Guid>_ApplicationId",
-                table: "OpenIddictEntityFrameworkCoreToken<Guid>",
-                column: "ApplicationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OpenIddictEntityFrameworkCoreToken<Guid>_AuthorizationId",
-                table: "OpenIddictEntityFrameworkCoreToken<Guid>",
-                column: "AuthorizationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OpenIddictEntityFrameworkCoreToken<Guid>_OpenIddictEntityFr~",
-                table: "OpenIddictEntityFrameworkCoreToken<Guid>",
-                column: "OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddic~");
 
             migrationBuilder.CreateIndex(
                 name: "IX_permissions_Name",
@@ -755,12 +622,6 @@ namespace IbraHabra.NET.Infra.Migrations
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_roles_OpenIddictEntityFrameworkCoreApplication<Guid, Role, ~",
-                schema: "identity",
-                table: "roles",
-                column: "OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddic~");
-
-            migrationBuilder.CreateIndex(
                 name: "RoleNameIndex",
                 schema: "identity",
                 table: "roles",
@@ -792,9 +653,9 @@ namespace IbraHabra.NET.Infra.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_user_role_RoleId",
+                name: "IX_user_roles_RoleId",
                 schema: "identity",
-                table: "user_role",
+                table: "user_roles",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
@@ -813,13 +674,13 @@ namespace IbraHabra.NET.Infra.Migrations
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 schema: "identity",
-                table: "Users.Commands",
+                table: "users",
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 schema: "identity",
-                table: "Users.Commands",
+                table: "users",
                 column: "NormalizedUserName",
                 unique: true);
         }
@@ -832,15 +693,16 @@ namespace IbraHabra.NET.Infra.Migrations
                 schema: "realms");
 
             migrationBuilder.DropTable(
+                name: "oauth_applications",
+                schema: "identity");
+
+            migrationBuilder.DropTable(
                 name: "oauth_scopes",
                 schema: "identity");
 
             migrationBuilder.DropTable(
                 name: "oauth_tokens",
                 schema: "identity");
-
-            migrationBuilder.DropTable(
-                name: "OpenIddictEntityFrameworkCoreToken<Guid>");
 
             migrationBuilder.DropTable(
                 name: "project_members",
@@ -867,7 +729,7 @@ namespace IbraHabra.NET.Infra.Migrations
                 schema: "identity");
 
             migrationBuilder.DropTable(
-                name: "user_role",
+                name: "user_roles",
                 schema: "identity");
 
             migrationBuilder.DropTable(
@@ -883,9 +745,6 @@ namespace IbraHabra.NET.Infra.Migrations
                 schema: "identity");
 
             migrationBuilder.DropTable(
-                name: "OpenIddictEntityFrameworkCoreAuthorization<Guid>");
-
-            migrationBuilder.DropTable(
                 name: "permissions",
                 schema: "realms");
 
@@ -898,18 +757,11 @@ namespace IbraHabra.NET.Infra.Migrations
                 schema: "identity");
 
             migrationBuilder.DropTable(
-                name: "Users.Commands",
+                name: "users",
                 schema: "identity");
 
             migrationBuilder.DropTable(
                 name: "OpenIddictApplications");
-
-            migrationBuilder.DropTable(
-                name: "OpenIddictEntityFrameworkCoreApplication<Guid>");
-
-            migrationBuilder.DropTable(
-                name: "oauth_application",
-                schema: "identity");
 
             migrationBuilder.DropTable(
                 name: "projects",

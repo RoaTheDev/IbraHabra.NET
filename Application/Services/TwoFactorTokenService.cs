@@ -12,6 +12,22 @@ public class TwoFactorTokenService : ITwoFactorTokenService
         _cache = cache;
     }
 
+    public Task<(Guid UserId, string ClientId)?> ValidateAndRemoveTokenAsync(string token)
+    {
+        var key = $"2fa:{token}";
+
+        if (_cache.TryGetValue(key, out var data))
+        {
+            // Remove immediately to ensure one-time use
+            _cache.Remove(key);
+
+            dynamic tokenData = data!;
+            return Task.FromResult<(Guid, string)?>(((Guid)tokenData.UserId, (string)tokenData.ClientId));
+        }
+
+        return Task.FromResult<(Guid, string)?>(null);
+    }
+
     public Task<string> CreateTokenAsync(Guid userId, string clientId)
     {
         var token = Guid.CreateVersion7().ToString();
@@ -20,22 +36,5 @@ public class TwoFactorTokenService : ITwoFactorTokenService
         _cache.Set($"2fa:{token}", data, TimeSpan.FromMinutes(5));
 
         return Task.FromResult(token);
-    }
-
-    public Task<(Guid UserId, string ClientId)?> ValidateTokenAsync(string token)
-    {
-        if (_cache.TryGetValue($"2fa:{token}", out var data))
-        {
-            dynamic tokenData = data!;
-            return Task.FromResult<(Guid, string)?>(((Guid)tokenData.UserId, (string)tokenData.ClientId));
-        }
-
-        return Task.FromResult<(Guid, string)?>(null);
-    }
-
-    public Task InvalidateTokenAsync(string token)
-    {
-        _cache.Remove($"2fa:{token}");
-        return Task.CompletedTask;
     }
 }

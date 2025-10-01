@@ -9,7 +9,6 @@ namespace IbraHabra.NET.Domain.Entity;
 public class OauthApplication : OpenIddictEntityFrameworkCoreApplication, IEntity<string>
 {
     public override string Id { get; set; } = null!;
-
     public Guid ProjectId { get; set; }
     public virtual Projects Projects { get; set; } = null!;
 
@@ -18,28 +17,6 @@ public class OauthApplication : OpenIddictEntityFrameworkCoreApplication, IEntit
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
-    public AuthPolicy GetAuthPolicy()
-    {
-        if (string.IsNullOrEmpty(Properties))
-            return new AuthPolicy();
-
-        try
-        {
-            using var document = JsonDocument.Parse(Properties);
-            if (document.RootElement.TryGetProperty("authPolicy", out var policyElement))
-            {
-                return JsonSerializer.Deserialize<AuthPolicy>(policyElement.GetRawText(), new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                }) ?? new AuthPolicy();
-            }
-        }
-        catch (JsonException)
-        {
-        }
-
-        return new AuthPolicy();
-    }
 
     public async Task<AuthPolicy> GetAuthPolicy(IOpenIddictApplicationManager manager,
         CancellationToken cancellationToken = default)

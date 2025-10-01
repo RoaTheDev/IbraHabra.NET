@@ -71,9 +71,4 @@ public class AuthController : ControllerBase
                 request.RevokeAllToken));
         return res.IsSuccess ? Ok() : StatusCode(res.StatusCode, res.Error);
     }
-
-    // [HttpPost("enable-2fa")]
-    // public async Task<IResult> Enable2Fa()
-    // {
-    // }
 }

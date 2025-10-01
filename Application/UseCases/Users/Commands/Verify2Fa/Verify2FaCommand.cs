@@ -17,12 +17,13 @@ public class Verify2FaHandler : IWolverineHandler
         UserManager<User> userManager, SignInManager<User> signInManager, IRepo<OauthApplication, string> repo,
         ITwoFactorTokenService tokenService)
     {
-        var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive);
+        var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive,
+            c => new { c.ClientId });
         if (client == null)
             return ApiResult<Verify2FaResponse>.Fail(400, "Invalid client.");
 
-        var tokenData = await tokenService.ValidateTokenAsync(command.TwoFactorToken);
-        if (!tokenData.HasValue)
+        var tokenData = await tokenService.ValidateAndRemoveTokenAsync(command.TwoFactorToken);
+        if (tokenData == null)
             return ApiResult<Verify2FaResponse>.Fail(401, "Invalid or expired token.");
 
         if (tokenData.Value.ClientId != client.ClientId)
@@ -38,8 +39,6 @@ public class Verify2FaHandler : IWolverineHandler
 
         if (!isValidCode)
             return ApiResult<Verify2FaResponse>.Fail(401, "Invalid authenticator code.");
-
-        await tokenService.InvalidateTokenAsync(command.TwoFactorToken);
 
         await signInManager.SignInAsync(user, isPersistent: false);
 

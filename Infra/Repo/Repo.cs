@@ -63,6 +63,12 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
         return await _dbSet.AsNoTracking().FirstOrDefaultAsync(predicate);
     }
 
+    public async Task<TProjection?> GetViaConditionAsync<TProjection>(Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TEntity, TProjection>> projection)
+    {
+        return await _dbSet.AsNoTracking().Where(predicate).Select(projection).FirstOrDefaultAsync();
+    }
+
     public async Task<(IEnumerable<TProjection> Items, string? NextCursor)> GetByCursorAsync<TProjection>(
         string? cursor,
         int pageSize,

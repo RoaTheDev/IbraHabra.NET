@@ -8,6 +8,9 @@ public interface IRepo<TEntity, in TKey>
     Task<TEntity?> GetViaIdAsync(TKey id);
     Task<TEntity?> GetViaConditionAsync(Expression<Func<TEntity, bool>> predicate);
 
+    Task<TProjection?> GetViaConditionAsync<TProjection>(Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TEntity, TProjection>> projection);
+
     Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate);
     Task<long> CountAsync(Expression<Func<TEntity, bool>> predicate);
 
@@ -42,7 +45,6 @@ public interface IRepo<TEntity, in TKey>
         Expression<Func<TEntity, TProjection>> projection,
         bool ascending = true);
 
-    
 
     Task<(IEnumerable<TProjection> Items, string? NextCursor)> FindWithIncludesCursorAsync<TProjection>(
         Expression<Func<TEntity, bool>> predicate,

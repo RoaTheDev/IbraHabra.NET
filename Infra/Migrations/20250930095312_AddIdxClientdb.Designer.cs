@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IbraHabra.NET.Infra.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250919090023_InitAdd")]
-    partial class InitAdd
+    [Migration("20250930095312_AddIdxClientdb")]
+    partial class AddIdxClientdb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -159,8 +159,8 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -211,10 +211,6 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<Guid?>("OpenIddictEntityFrameworkCoreApplicationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddic~");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -223,8 +219,6 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.HasIndex("NormalizedName")
                         .IsUnique()
                         .HasDatabaseName("RoleNameIndex");
-
-                    b.HasIndex("OpenIddictEntityFrameworkCoreApplicationId");
 
                     b.ToTable("roles", "identity");
                 });
@@ -251,6 +245,14 @@ namespace IbraHabra.NET.Infra.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -297,7 +299,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("Users.Commands", "identity");
+                    b.ToTable("users", "identity");
                 });
 
             modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserAuditTrail", b =>
@@ -375,7 +377,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("user_audit_trails", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Users.Commandsession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -515,7 +517,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("user_role", "identity");
+                    b.ToTable("user_roles", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
@@ -555,6 +557,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ClientType")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -566,6 +569,11 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Property<string>("ConsentType")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasMaxLength(55)
+                        .HasColumnType("character varying(55)");
 
                     b.Property<string>("DisplayName")
                         .HasColumnType("text");
@@ -583,7 +591,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Properties")
-                        .HasColumnType("text");
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("RedirectUris")
                         .HasColumnType("text");
@@ -599,129 +607,14 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.HasIndex("ClientId")
                         .IsUnique();
 
-                    b.ToTable("OpenIddictApplications", (string)null);
-                });
+                    b.ToTable("oauth_applications", "identity", t =>
+                        {
+                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
+                        });
 
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid, IbraHabra.NET.Domain.Entity.Role, OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ApplicationType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClientId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClientSecret")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClientType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ConcurrencyToken")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ConsentType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasMaxLength(144)
-                        .HasColumnType("character varying(144)");
-
-                    b.Property<string>("DisplayName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DisplayNames")
-                        .HasColumnType("text");
-
-                    b.Property<string>("JsonWebKeySet")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Permissions")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PostLogoutRedirectUris")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Properties")
-                        .HasColumnType("text");
-
-                    b.Property<string>("RedirectUris")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Requirements")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Settings")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("oauth_application", "identity");
-
-                    b.HasDiscriminator().HasValue("OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddictEntityFrameworkCoreToken<Guid>>");
+                    b.HasDiscriminator().HasValue("OpenIddictEntityFrameworkCoreApplication");
 
                     b.UseTphMappingStrategy();
-                });
-
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ApplicationType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClientId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClientSecret")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ClientType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ConcurrencyToken")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ConsentType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DisplayName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DisplayNames")
-                        .HasColumnType("text");
-
-                    b.Property<string>("JsonWebKeySet")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Permissions")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PostLogoutRedirectUris")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Properties")
-                        .HasColumnType("text");
-
-                    b.Property<string>("RedirectUris")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Requirements")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Settings")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("OpenIddictEntityFrameworkCoreApplication<Guid>");
                 });
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization", b =>
@@ -764,43 +657,6 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.HasIndex("ApplicationId", "Status", "Subject", "Type");
 
                     b.ToTable("oauth_authorizations", "identity");
-                });
-
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ApplicationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ConcurrencyToken")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Properties")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Scopes")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Subject")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationId");
-
-                    b.ToTable("OpenIddictEntityFrameworkCoreAuthorization<Guid>");
                 });
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreScope", b =>
@@ -904,66 +760,9 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("oauth_tokens", "identity");
                 });
 
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ApplicationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("AuthorizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ConcurrencyToken")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("OpenIddictEntityFrameworkCoreApplicationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("OpenIddictEntityFrameworkCoreApplication<Guid, Role, OpenIddic~");
-
-                    b.Property<string>("Payload")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Properties")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("RedemptionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReferenceId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Subject")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationId");
-
-                    b.HasIndex("AuthorizationId");
-
-                    b.HasIndex("OpenIddictEntityFrameworkCoreApplicationId");
-
-                    b.ToTable("OpenIddictEntityFrameworkCoreToken<Guid>");
-                });
-
             modelBuilder.Entity("IbraHabra.NET.Domain.Entity.OauthApplication", b =>
                 {
-                    b.HasBaseType("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid, IbraHabra.NET.Domain.Entity.Role, OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>>");
+                    b.HasBaseType("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -971,39 +770,17 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("MinPasswordLength")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("RequireDigit")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireEmailVerification")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireMfa")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireNonAlphanumeric")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequirePkce")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireUppercase")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasIndex("ProjectId", "ClientType")
-                        .IsUnique();
+                    b.HasIndex("ProjectId", "ClientId");
 
-                    b.ToTable(t =>
+                    b.ToTable("oauth_applications", "identity", t =>
                         {
-                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "\"MinPasswordLength\" >= 6");
+                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
                         });
 
                     b.HasDiscriminator().HasValue("OauthApplication");
@@ -1028,7 +805,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .IsRequired();
 
                     b.HasOne("IbraHabra.NET.Domain.Entity.ProjectRole", "ProjectRole")
-                        .WithMany()
+                        .WithMany("ProjectMembers")
                         .HasForeignKey("ProjectRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1076,13 +853,6 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("ProjectRole");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Role", b =>
-                {
-                    b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid, IbraHabra.NET.Domain.Entity.Role, OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>>", null)
-                        .WithMany("Authorizations")
-                        .HasForeignKey("OpenIddictEntityFrameworkCoreApplicationId");
-                });
-
             modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserAuditTrail", b =>
                 {
                     b.HasOne("IbraHabra.NET.Domain.Entity.User", "User")
@@ -1094,7 +864,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Users.Commandsession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
                 {
                     b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
                         .WithMany()
@@ -1163,15 +933,6 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("Application");
                 });
 
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
-                {
-                    b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", "Application")
-                        .WithMany("Authorizations")
-                        .HasForeignKey("ApplicationId");
-
-                    b.Navigation("Application");
-                });
-
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken", b =>
                 {
                     b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", "Application")
@@ -1181,26 +942,6 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization", "Authorization")
                         .WithMany("Tokens")
                         .HasForeignKey("AuthorizationId");
-
-                    b.Navigation("Application");
-
-                    b.Navigation("Authorization");
-                });
-
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>", b =>
-                {
-                    b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", "Application")
-                        .WithMany("Tokens")
-                        .HasForeignKey("ApplicationId");
-
-                    b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", "Authorization")
-                        .WithMany("Tokens")
-                        .HasForeignKey("AuthorizationId")
-                        .HasConstraintName("FK_OpenIddictEntityFrameworkCoreToken<Guid>_OpenIddictEntityF~1");
-
-                    b.HasOne("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid, IbraHabra.NET.Domain.Entity.Role, OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>>", null)
-                        .WithMany("Tokens")
-                        .HasForeignKey("OpenIddictEntityFrameworkCoreApplicationId");
 
                     b.Navigation("Application");
 
@@ -1220,6 +961,8 @@ namespace IbraHabra.NET.Infra.Migrations
 
             modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectRole", b =>
                 {
+                    b.Navigation("ProjectMembers");
+
                     b.Navigation("ProjectRolePermissions");
                 });
 
@@ -1246,26 +989,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("Tokens");
                 });
 
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid, IbraHabra.NET.Domain.Entity.Role, OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken<System.Guid>>", b =>
-                {
-                    b.Navigation("Authorizations");
-
-                    b.Navigation("Tokens");
-                });
-
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication<System.Guid>", b =>
-                {
-                    b.Navigation("Authorizations");
-
-                    b.Navigation("Tokens");
-                });
-
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization", b =>
-                {
-                    b.Navigation("Tokens");
-                });
-
-            modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>
                 {
                     b.Navigation("Tokens");
                 });

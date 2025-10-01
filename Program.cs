@@ -32,7 +32,6 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGroup("api/auth").MapIdentityApi<User>().WithTags("System Authentication");
 app.MapControllers();
 
 app.Run();

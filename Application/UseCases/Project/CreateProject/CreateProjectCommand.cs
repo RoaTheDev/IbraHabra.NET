@@ -13,6 +13,7 @@ public record CreateProjectCommand(
     bool AllowRegistration,
     bool AllowSocialLogin)
     : BaseProjectCommand(DisplayName, Description, HomePageUrl);
+
 public record CreateProjectResponse(Guid Id);
 
 public class CreateProjectHandler : IWolverineHandler

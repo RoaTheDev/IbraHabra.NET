@@ -1,8 +1,10 @@
 using System.Text.Json;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Services;
+using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Domain.Entity;
 using IbraHabra.NET.Domain.SharedKernel.Interface;
+using IbraHabra.NET.Infra.Persistent.Projections;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 
@@ -22,15 +24,22 @@ public class RegisterUserHandler : IWolverineHandler
     {
         if (string.IsNullOrEmpty(command.Email) || string.IsNullOrEmpty(command.Password))
             return ApiResult<RegisterUserCommandResponse>.Fail(400, "Email and Password are required.");
-    
-        var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive);
+
+        var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive,
+            c => new AuthPolicyAndRedirectUriProjections(c.Properties, c.RedirectUris));
+
         if (client == null)
             return ApiResult<RegisterUserCommandResponse>.Fail(400, "Invalid or inactive client.");
 
         if (await userManager.FindByEmailAsync(command.Email) != null)
             return ApiResult<RegisterUserCommandResponse>.Fail(409, "Email already registered");
 
-        var policy = client.GetAuthPolicy();
+        var policy = ReadAuthPolicy.GetAuthPolicy(client.Properties);
+
+
+        var passwordValidationRes = ReadAuthPolicy.ValidatePasswordAgainstPolicy(command.Password, policy);
+        if (!passwordValidationRes.isPassed)
+            return ApiResult<RegisterUserCommandResponse>.Fail(400, passwordValidationRes.errorMsg!);
 
         var user = new User
         {
@@ -50,11 +59,12 @@ public class RegisterUserHandler : IWolverineHandler
         if (policy.RequireEmailVerification)
         {
             var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-            
+
             var redirectUris = ParseRedirectUris(client.RedirectUris);
-            var redirectUri = redirectUris.FirstOrDefault() ?? "https://yourdomain.com"; 
-            
-            var confirmationLink = $"{redirectUri}/confirm-email?email={command.Email}&token={Uri.EscapeDataString(token)}&clientId={command.ClientId}";
+            var redirectUri = redirectUris.FirstOrDefault() ?? "https://yourdomain.com";
+
+            var confirmationLink =
+                $"{redirectUri}/confirm-email?email={command.Email}&token={Uri.EscapeDataString(token)}&clientId={command.ClientId}";
             await emailService.SendConfirmationEmailAsync(command.Email, confirmationLink);
         }
 

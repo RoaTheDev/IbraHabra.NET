@@ -38,7 +38,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.Entity<User>(e =>
         {
-            e.ToTable("Users.Commands", "identity");
+            e.ToTable("users", "identity");
             e.Property(f => f.FirstName).HasMaxLength(50);
             e.Property(f => f.LastName).HasMaxLength(50);
         });
@@ -53,26 +53,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     private void ConfigureOpenIdDict(ModelBuilder builder)
     {
         builder.UseOpenIddict();
+        builder.Entity<OpenIddictEntityFrameworkCoreApplication>(e =>
+        {
+            e.Property(x => x.Properties)
+                .HasColumnType("jsonb");
+            e.ToTable("oauth_applications", "identity", b => b.HasCheckConstraint(
+                "CK_Client_MinPasswordLength",
+                "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') " +
+                "AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6"
+            ));
+        });
 
         // Configure your custom entity - it will inherit from OpenIddictEntityFrameworkCoreApplication
         builder.Entity<OauthApplication>(e =>
         {
-            e.ToTable("oauth_applications", "identity",
-                tb => tb.HasCheckConstraint("CK_Client_MinPasswordLength",
-                    "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND " +
-                    "(\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6"));
+            e.ToTable("oauth_applications", "identity");
 
             e.Property(f => f.ClientType)
-                .HasConversion<string>()
                 .IsRequired();
-
-            // Add check constraint for auth policy
-
-
-            // Index on ProjectId and ClientType
-            e.HasIndex(f => new { f.ProjectId, f.ClientType })
-                .IsUnique();
-
+            e.HasIndex(f => new { f.ProjectId, f.ClientType });
             // Relationships
             e.HasOne(oa => oa.Projects)
                 .WithMany(p => p.OauthApplications)
@@ -137,7 +136,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.Entity<ProjectMember>(e =>
         {
-            e.HasKey(pm => new ProjectMemberId(pm.ProjectId, pm.UserId));
+            e.HasKey(pm => new { pm.ProjectId, pm.UserId });
+
+            // Ignore the computed Id property
+            e.Ignore(pm => pm.Id);
+
+            // Explicitly configure the ProjectRoleId property before the relationship
+            e.Property(pm => pm.ProjectRoleId).IsRequired();
 
             // Relationships
             e.HasOne(pm => pm.Projects)
@@ -151,9 +156,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                 .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(pm => pm.ProjectRole)
-                .WithMany()
+                .WithMany(pr => pr.ProjectMembers)
                 .HasForeignKey(pm => pm.ProjectRoleId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
 
             e.ToTable("project_members", "realms");
         });
@@ -185,9 +191,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         builder.Entity<ProjectRolePermission>(e =>
         {
-            e.HasKey(f => new ProjectRolePermissionId(f.ProjectRoleId, f.PermissionId));
+            e.HasKey(prp => new { prp.ProjectRoleId, prp.PermissionId });
 
-
+            e.Ignore(prp => prp.Id);
             e.HasOne(prp => prp.ProjectRole)
                 .WithMany(pr => pr.ProjectRolePermissions)
                 .HasForeignKey(prp => prp.ProjectRoleId)
@@ -212,7 +218,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(f => f.LogoUrl).HasMaxLength(255).IsRequired(false);
             e.Property(f => f.Description).HasMaxLength(255).IsRequired(false);
             e.Property(f => f.DisplayName).HasMaxLength(50).IsRequired();
-            
+
             e.HasIndex(f => f.DisplayName).IsUnique();
 
             e.ToTable("projects", "realms");
@@ -255,7 +261,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.HasKey(f => f.Id);
             e.Property(f => f.Id).ValueGeneratedOnAdd();
-            e.Property(f => f.UserId).IsRequired(); 
+            e.Property(f => f.UserId).IsRequired();
             e.Property(f => f.SessionToken).HasMaxLength(255).IsRequired();
             e.Property(f => f.ClientId).HasMaxLength(255).IsRequired();
             e.Property(f => f.DeviceInfo).HasMaxLength(500).IsRequired();

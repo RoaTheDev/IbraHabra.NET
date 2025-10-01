@@ -11,17 +11,18 @@ using OpenIddict.Server.AspNetCore;
 
 namespace IbraHabra.NET.Adapter.Controller;
 
+[ApiController]
 public class OauthController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
-    private readonly IOpenIddictApplicationManager _applicationManager; // Non-generic version
+    private readonly IOpenIddictApplicationManager _applicationManager; 
     private readonly IOpenIddictAuthorizationManager _authorizationManager;
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<User> _signInManager;
     private readonly IRepo<OauthApplication, string> _clientRepo;
 
     public OauthController(
-        IOpenIddictApplicationManager applicationManager, // Non-generic version
+        IOpenIddictApplicationManager applicationManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
         SignInManager<User> signInManager,

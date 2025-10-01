@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IbraHabra.NET.Infra.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250925032534_change_db_schema")]
-    partial class change_db_schema
+    [Migration("20250930095440_changeIdxClientdb")]
+    partial class changeIdxClientdb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -93,14 +93,9 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Property<Guid>("ProjectRoleId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ProjectRoleId1")
-                        .HasColumnType("uuid");
-
                     b.HasKey("ProjectId", "UserId");
 
                     b.HasIndex("ProjectRoleId");
-
-                    b.HasIndex("ProjectRoleId1");
 
                     b.HasIndex("UserId");
 
@@ -164,8 +159,8 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -251,6 +246,14 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -296,7 +299,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("Users.Commands", "identity");
+                    b.ToTable("users", "identity");
                 });
 
             modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserAuditTrail", b =>
@@ -374,7 +377,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("user_audit_trails", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Users.Commandsession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -588,7 +591,7 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Properties")
-                        .HasColumnType("text");
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("RedirectUris")
                         .HasColumnType("text");
@@ -604,7 +607,10 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.HasIndex("ClientId")
                         .IsUnique();
 
-                    b.ToTable("oauth_applications", "identity");
+                    b.ToTable("oauth_applications", "identity", t =>
+                        {
+                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
+                        });
 
                     b.HasDiscriminator().HasValue("OpenIddictEntityFrameworkCoreApplication");
 
@@ -764,39 +770,17 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("MinPasswordLength")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("RequireDigit")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireEmailVerification")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireMfa")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireNonAlphanumeric")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequirePkce")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireUppercase")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasIndex("ProjectId", "ClientType")
-                        .IsUnique();
+                    b.HasIndex("ProjectId", "ClientType");
 
                     b.ToTable("oauth_applications", "identity", t =>
                         {
-                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "\"MinPasswordLength\" >= 6");
+                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
                         });
 
                     b.HasDiscriminator().HasValue("OauthApplication");
@@ -821,14 +805,10 @@ namespace IbraHabra.NET.Infra.Migrations
                         .IsRequired();
 
                     b.HasOne("IbraHabra.NET.Domain.Entity.ProjectRole", "ProjectRole")
-                        .WithMany()
+                        .WithMany("ProjectMembers")
                         .HasForeignKey("ProjectRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("IbraHabra.NET.Domain.Entity.ProjectRole", null)
-                        .WithMany("ProjectMembers")
-                        .HasForeignKey("ProjectRoleId1");
 
                     b.HasOne("IbraHabra.NET.Domain.Entity.User", "User")
                         .WithMany()
@@ -884,7 +864,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Users.Commandsession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
                 {
                     b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
                         .WithMany()
