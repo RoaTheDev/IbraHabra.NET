@@ -1,9 +1,9 @@
-using FluentValidation;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RefreshAdminToken;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Verify2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
+using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
@@ -14,13 +14,11 @@ namespace IbraHabra.NET.Adapter.Controller;
 [Route("api/admin/auth")]
 public class AdminAuthController : ControllerBase
 {
-    private readonly ICommandBus _bus;
-    private readonly IValidator<LoginAdminCommand> _loginValidator;
+    private readonly IMessageBus _bus;
 
-    public AdminAuthController(ICommandBus bus, IValidator<LoginAdminCommand> loginValidator)
+    public AdminAuthController(IMessageBus bus)
     {
         _bus = bus;
-        _loginValidator = loginValidator;
     }
 
     /// <summary>
@@ -28,14 +26,11 @@ public class AdminAuthController : ControllerBase
     /// If 2FA is enabled, returns RequiresTwoFactor=true
     /// </summary>
     [HttpPost("login")]
+    [ValidateModel(typeof(LoginAdminCommand))]
     public async Task<IActionResult> Login([FromBody] LoginAdminCommand command)
     {
-        var validationResult = await _loginValidator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-            return BadRequest(ApiResult.Fail(400, validationResult.Errors.First().ErrorMessage));
-
         var result = await _bus.InvokeAsync<ApiResult<LoginAdminCommandResponse>>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, result.Error);
     }
 
     /// <summary>
@@ -52,13 +47,22 @@ public class AdminAuthController : ControllerBase
     /// Refresh admin JWT token
     /// </summary>
     [HttpPost("refresh")]
-    [Authorize(Roles = "Admin,SuperAdmin")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshAdminTokenCommand command)
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> RefreshToken()
     {
-        var result = await _bus.InvokeAsync<ApiResult<RefreshAdminTokenResponse>>(command);
+        var authHeader = HttpContext.Request.Headers.Authorization.ToString();
+        var token = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? authHeader.Substring("Bearer ".Length).Trim()
+            : null;
+
+        if (string.IsNullOrEmpty(token))
+            return Unauthorized(new { message = "No token provided" });
+
+        var result = await _bus.InvokeAsync<ApiResult<RefreshAdminTokenResponse>>(
+            new RefreshAdminTokenCommand(token));
+    
         return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
     }
-
     /// <summary>
     /// Get current admin user information
     /// </summary>
@@ -87,8 +91,6 @@ public class AdminAuthController : ControllerBase
     [Authorize(Roles = "Admin,SuperAdmin")]
     public IActionResult Logout()
     {
-        // For JWT-based auth, logout is typically handled client-side by removing the token
-        // You can add additional server-side logic here if needed (e.g., token blacklisting)
         return Ok(ApiResult.Ok());
     }
 }

@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using IbraHabra.NET.Domain.Entities;
 using IbraHabra.NET.Infra.Persistent;
@@ -8,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
+using OpenIddict.Server.AspNetCore;
 
 namespace IbraHabra.NET.Infra.Extension;
 
@@ -35,13 +38,12 @@ public static class AppPolicyExtension
                     config.GetValue("Identity:Login:Require_PhoneNumber_Confirmation", false);
                 options.SignIn.RequireConfirmedAccount =
                     config.GetValue("Identity:Login:Require_Account_Confirmation", false);
-                Console.WriteLine(options.SignIn);
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
-
-        // Add JWT Authentication for Admin endpoints
-        var jwtSecret = config["Jwt:Secret"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
+        
+        // ADMIN JWT - Keep Symmetric (HMAC-SHA256)
+        var jwtSecret = config["JWT:SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
         if (!string.IsNullOrEmpty(jwtSecret))
         {
             var key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -51,26 +53,42 @@ public static class AppPolicyExtension
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
-            .AddJwtBearer(options =>
+            .AddJwtBearer( options =>
             {
-                options.RequireHttpsMetadata = false; // Set to true in production
+                options.RequireHttpsMetadata = config.GetValue("JWT:REQUIRE_HTTPS", true);
                 options.SaveToken = true;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
                     ValidateIssuer = true,
-                    ValidIssuer = config["Jwt:Issuer"] ?? "IbraHabra",
+                    ValidIssuer = config["JWT:ISSUER"] ?? "IbraHabra",
                     ValidateAudience = true,
-                    ValidAudience = config["Jwt:Audience"] ?? "IbraHabra.Admin",
+                    ValidAudience = config["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator",
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
             });
         }
+
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminOnly", policy =>
+            {
+                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireRole("Admin", "Super");
+            });
+
+            options.AddPolicy("Client", policy =>
+            {
+                policy.AuthenticationSchemes.Add(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                policy.RequireAuthenticatedUser();
+            });
+        });
     }
 
-    public static void AddOpenIdDictConfig(this IServiceCollection services)
+    public static void AddOpenIdDictConfig(this IServiceCollection services, IConfiguration config, 
+        IWebHostEnvironment env)
     {
         services.AddOpenIddict()
             .AddCore(opts => opts.UseEntityFrameworkCore().UseDbContext<AppDbContext>())
@@ -80,10 +98,12 @@ public static class AppPolicyExtension
                     .SetTokenEndpointUris("/connect/token")
                     .SetEndSessionEndpointUris("/connect/logout")
                     .SetUserInfoEndpointUris("/connect/userinfo")
-                    .SetRevocationEndpointUris("/connect/revocation");
+                    .SetRevocationEndpointUris("/connect/revocation")
+                    .SetIntrospectionEndpointUris("/connect/introspect");
 
                 opts.AllowAuthorizationCodeFlow()
-                    .AllowRefreshTokenFlow();
+                    .AllowRefreshTokenFlow()
+                    .AllowClientCredentialsFlow();
 
                 opts.RequireProofKeyForCodeExchange();
 
@@ -96,10 +116,46 @@ public static class AppPolicyExtension
                     OpenIddictConstants.Scopes.Roles
                 );
 
-                opts.SetAccessTokenLifetime(TimeSpan.FromMinutes(10));
-                opts.SetRefreshTokenLifetime(TimeSpan.FromDays(7));
-                opts.AddDevelopmentEncryptionCertificate()
-                    .AddDevelopmentSigningCertificate();
+                opts.SetAccessTokenLifetime(TimeSpan.FromMinutes(30));
+                opts.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
+
+                // PRODUCTION: Use proper certificates with asymmetric keys (RSA)
+                if (env.IsProduction())
+                {
+                    var certPath = config["OpenIddict:Certificate:Path"];
+                    var certPassword = config["OpenIddict:Certificate:Password"] 
+                                      ?? Environment.GetEnvironmentVariable("CERT_PASSWORD");
+
+                    if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath))
+                    {
+                        // Use X509CertificateLoader (new API in .NET 8+)
+
+                        var certificate = X509CertificateLoader.LoadPkcs12FromFile(certPath, !string.IsNullOrEmpty(certPassword) ? certPassword : null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+                        opts.AddEncryptionCertificate(certificate)
+                            .AddSigningCertificate(certificate);
+                    }
+                    else
+                    {
+                        // Generate RSA keys if no certificate provided
+                        var rsa = RSA.Create(2048);
+                        var signingKey = new RsaSecurityKey(rsa) { KeyId = Guid.NewGuid().ToString() };
+                        opts.AddSigningKey(signingKey);
+                        
+                        var encryptionRsa = RSA.Create(2048);
+                        var encryptionKey = new RsaSecurityKey(encryptionRsa) { KeyId = Guid.NewGuid().ToString() };
+                        opts.AddEncryptionKey(encryptionKey);
+                        
+                        Console.WriteLine("⚠️  WARNING: Using dynamically generated RSA keys. " +
+                                        "Keys will change on restart. Use persistent certificates in production!");
+                    }
+                }
+                else
+                {
+                    // DEVELOPMENT: Use development certificates (also asymmetric)
+                    opts.AddDevelopmentEncryptionCertificate()
+                        .AddDevelopmentSigningCertificate();
+                }
 
                 opts.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
@@ -108,7 +164,7 @@ public static class AppPolicyExtension
                     .EnableUserInfoEndpointPassthrough()
                     .EnableStatusCodePagesIntegration();
 
-                // Custom claims
+                // Custom claims handler
                 opts.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(builder =>
                     builder.UseInlineHandler(async context =>
                     {
@@ -124,11 +180,12 @@ public static class AppPolicyExtension
                             {
                                 var roles = await userManager.GetRolesAsync(user);
                                 context.Principal.SetClaims(OpenIddictConstants.Claims.Role,
-                                    (ImmutableArray<string>)roles);
+                                    roles.ToImmutableArray());
                             }
                         }
                     }));
 
+                // Refresh token rotation with reuse detection
                 opts.AddEventHandler<OpenIddictServerEvents.HandleTokenRequestContext>(builders =>
                     builders.UseInlineHandler(async context =>
                     {
@@ -137,8 +194,9 @@ public static class AppPolicyExtension
                         var manager = context.Transaction.GetHttpRequest()!
                             .HttpContext.RequestServices.GetRequiredService<IOpenIddictTokenManager>();
 
-                        var token = await manager.FindByReferenceIdAsync(context.Request.RefreshToken ?? string.Empty,
-                            CancellationToken.None);
+                        var token = await manager.FindByReferenceIdAsync(
+                            context.Request.RefreshToken ?? string.Empty, CancellationToken.None);
+                        
                         if (token == null)
                         {
                             context.Reject(
@@ -147,6 +205,7 @@ public static class AppPolicyExtension
                             return;
                         }
 
+                        // Token reuse detection
                         if (string.Equals(await manager.GetStatusAsync(token, CancellationToken.None),
                                 OpenIddictConstants.Statuses.Redeemed, StringComparison.Ordinal))
                         {
@@ -154,10 +213,12 @@ public static class AppPolicyExtension
 
                             var subject = await manager.GetSubjectAsync(token, CancellationToken.None);
                             if (subject != null)
+                            {
                                 await foreach (var t in manager.FindBySubjectAsync(subject, CancellationToken.None))
                                 {
                                     await manager.TryRevokeAsync(t, CancellationToken.None);
                                 }
+                            }
 
                             context.Reject(
                                 error: OpenIddictConstants.Errors.InvalidGrant,
@@ -168,29 +229,27 @@ public static class AppPolicyExtension
                         await manager.TryRedeemAsync(token, CancellationToken.None);
                     }));
                 
+                // Revoke old refresh token after successful refresh
                 opts.AddEventHandler<OpenIddictServerEvents.ApplyTokenResponseContext>(builders =>
                     builders.UseInlineHandler(async context =>
                     {
-                        if (context.Request != null && context.Request.IsRefreshTokenGrantType())
+                        if (context.Request?.IsRefreshTokenGrantType() == true && 
+                            context.Request.RefreshToken != null)
                         {
                             var manager = context.Transaction.GetHttpRequest()
                                 ?.HttpContext.RequestServices
                                 .GetRequiredService<IOpenIddictTokenManager>();
 
-                            if (context.Request.RefreshToken != null)
+                            if (manager != null)
                             {
-                                if (manager != null)
-                                {
-                                    var oldToken = await manager.FindByReferenceIdAsync(
-                                        context.Request.RefreshToken);
+                                var oldToken = await manager.FindByReferenceIdAsync(
+                                    context.Request.RefreshToken, CancellationToken.None);
 
-                                    if (oldToken != null)
-                                    {
-                                        await manager.TryRevokeAsync(oldToken, CancellationToken.None);
-                                    }
+                                if (oldToken != null)
+                                {
+                                    await manager.TryRevokeAsync(oldToken, CancellationToken.None);
                                 }
                             }
-
                         }
                     }));
             });

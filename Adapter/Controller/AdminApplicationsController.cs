@@ -5,6 +5,7 @@ using IbraHabra.NET.Application.UseCases.Client.Queries;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using Wolverine;
@@ -13,6 +14,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 [Route("api/admin/apps")]
+[Authorize(Policy = "AdminOnly")]
 public class AdminApplicationsController : ControllerBase
 {
     private readonly ICommandBus _bus;
@@ -29,7 +31,6 @@ public class AdminApplicationsController : ControllerBase
         _appRepo = appRepo;
     }
 
-    // Admin: Create application (reuses existing CreateClientCommand)
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateClientCommand command)
     {
@@ -39,7 +40,6 @@ public class AdminApplicationsController : ControllerBase
             : StatusCode(result.StatusCode, result);
     }
 
-    // Admin: List applications with cursor-based pagination and optional filter by projectId
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] Guid? projectId, [FromQuery] string? cursor, [FromQuery] int pageSize = 20)
     {

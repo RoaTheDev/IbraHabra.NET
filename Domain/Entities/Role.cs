@@ -5,6 +5,6 @@ namespace IbraHabra.NET.Domain.Entities;
 
 public class Role : IdentityRole<Guid>, IEntity<Guid>
 {
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; }
 }

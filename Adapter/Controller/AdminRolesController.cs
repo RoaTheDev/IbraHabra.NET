@@ -15,7 +15,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 /// </summary>
 [ApiController]
 [Route("api/admin/roles")]
-[Authorize(Roles = "Admin,SuperAdmin")]
+[Authorize(Policy = "AdminOnly")]
 public class AdminRolesController : ControllerBase
 {
     private readonly ICommandBus _bus;

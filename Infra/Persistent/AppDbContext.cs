@@ -32,6 +32,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         ConfigureProject(builder);
         ConfigureUserAuditTrail(builder);
         ConfigureUserSession(builder);
+        
+        
     }
 
     private void ConfigureIdentity(ModelBuilder builder)
@@ -40,7 +42,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.ToTable("users", "identity");
             e.Property(f => f.FirstName).HasMaxLength(50);
-            e.Property(f => f.LastName).HasMaxLength(50);
+            e.Property(f => f.LastName).HasMaxLength(50); 
         });
         builder.Entity<Role>().ToTable("roles", "identity");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("user_roles", "identity");

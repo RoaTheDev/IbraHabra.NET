@@ -53,7 +53,7 @@ public class UnitOfWork : IUnitOfWork
         {
             await _currentTransaction.CommitAsync(cancellationToken);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             await RollbackTransactionAsync(cancellationToken);
             throw;

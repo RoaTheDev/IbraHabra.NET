@@ -2,10 +2,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using IbraHabra.NET.Application.Dto.Response;
-using IbraHabra.NET.Domain.Contract.Services;
+using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Wolverine;
 
@@ -21,61 +20,59 @@ public class RefreshAdminTokenHandler : IWolverineHandler
 {
     public static async Task<ApiResult<RefreshAdminTokenResponse>> Handle(
         RefreshAdminTokenCommand command,
-        ICurrentUserService currentUserService,
         UserManager<User> userManager,
         IConfiguration configuration)
     {
-        var userId = currentUserService.UserId;
-        if (userId == Guid.Empty)
-            return ApiResult<RefreshAdminTokenResponse>.Fail(401, "Unauthorized.");
-
-        var user = await userManager.FindByIdAsync(userId.ToString());
-        if (user == null)
-            return ApiResult<RefreshAdminTokenResponse>.Fail(404, "User not found.");
-
-        // Verify user still has admin role
-        var roles = await userManager.GetRolesAsync(user);
-        if (!roles.Contains("Admin") && !roles.Contains("SuperAdmin"))
-            return ApiResult<RefreshAdminTokenResponse>.Fail(403, "Access denied. Admin privileges required.");
-
-        // Generate new JWT token
-        var token = await GenerateJwtToken(user, userManager, configuration);
-        var expiresAt = DateTime.UtcNow.AddHours(8);
-
-        return ApiResult<RefreshAdminTokenResponse>.Ok(new RefreshAdminTokenResponse(
-            Token: token,
-            ExpiresAt: expiresAt));
-    }
-
-    private static async Task<string> GenerateJwtToken(User user, UserManager<User> userManager, IConfiguration configuration)
-    {
-        var roles = await userManager.GetRolesAsync(user);
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var jwtSecret = configuration["JWT:SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
         
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Email, user.Email!),
-            new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}".Trim()),
-            new("admin", "true")
-        };
+        if (string.IsNullOrEmpty(jwtSecret))
+            return ApiResult<RefreshAdminTokenResponse>.Fail(500, "Server configuration error.");
 
-        foreach (var role in roles)
+        var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+        try
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = true,
+                ValidIssuer = configuration["JWT:ISSUER"] ?? "IbraHabra",
+                ValidateAudience = true,
+                ValidAudience = configuration["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator",
+                ValidateLifetime = false, 
+                ClockSkew = TimeSpan.Zero
+            };
+
+            var principal = tokenHandler.ValidateToken(command.Token, validationParameters, out _);
+            
+            // Extract user ID from token
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return ApiResult<RefreshAdminTokenResponse>.Fail(401, "Invalid token.");
+
+            var user = await userManager.FindByIdAsync(userIdClaim.Value);
+            if (user == null)
+                return ApiResult<RefreshAdminTokenResponse>.Fail(404, "User not found.");
+
+            // Verify user still has admin role
+            var roles = await userManager.GetRolesAsync(user);
+            if (!roles.Contains("Admin") && !roles.Contains("Super"))
+                return ApiResult<RefreshAdminTokenResponse>.Fail(403, "Access denied.");
+
+            // Generate new token
+            var newToken = await JwtGen.GenerateJwtToken(user, userManager, configuration);
+            var expiresAt = DateTime.UtcNow.AddHours(8);
+
+            return ApiResult<RefreshAdminTokenResponse>.Ok(new RefreshAdminTokenResponse(
+                Token: newToken,
+                ExpiresAt: expiresAt));
         }
-
-        var jwtSecret = configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"] ?? "IbraHabra",
-            audience: configuration["Jwt:Audience"] ?? "IbraHabra.Admin",
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
-            signingCredentials: credentials
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        catch (SecurityTokenException)
+        {
+            return ApiResult<RefreshAdminTokenResponse>.Fail(401, "Invalid token.");
+        }
     }
+
 }
