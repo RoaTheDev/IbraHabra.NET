@@ -1,4 +1,4 @@
-using IbraHabra.NET.Domain.Entity;
+using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -59,12 +59,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                 .HasColumnType("jsonb");
             e.ToTable("oauth_applications", "identity", b => b.HasCheckConstraint(
                 "CK_Client_MinPasswordLength",
-                "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') " +
-                "AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6"
+                "(\"Properties\"->'authPolicy'->>'minPasswordLength') IS NULL " +
+                "OR (\"Properties\"->'authPolicy'->>'minPasswordLength')::int >= 6"
             ));
+
         });
 
-        // Configure your custom entity - it will inherit from OpenIddictEntityFrameworkCoreApplication
         builder.Entity<OauthApplication>(e =>
         {
             e.ToTable("oauth_applications", "identity");
@@ -214,7 +214,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.HasKey(f => f.Id);
             e.Property(f => f.Id).ValueGeneratedOnAdd();
-            e.Property(f => f.HomePageUrl).HasMaxLength(255).IsRequired();
+            e.Property(f => f.HomePageUrl).HasMaxLength(255).IsRequired(false);
             e.Property(f => f.LogoUrl).HasMaxLength(255).IsRequired(false);
             e.Property(f => f.Description).HasMaxLength(255).IsRequired(false);
             e.Property(f => f.DisplayName).HasMaxLength(50).IsRequired();

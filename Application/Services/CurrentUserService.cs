@@ -1,6 +1,5 @@
 using System.Security.Claims;
-using IbraHabra.NET.Domain.SharedKernel.Interface;
-using IbraHabra.NET.Domain.SharedKernel.Interface.Services;
+using IbraHabra.NET.Domain.Contract.Services;
 
 namespace IbraHabra.NET.Application.Services;
 

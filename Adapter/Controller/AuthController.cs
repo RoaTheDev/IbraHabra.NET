@@ -15,11 +15,11 @@ namespace IbraHabra.NET.Adapter.Controller;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IMessageBus _bus;
+    private readonly ICommandBus _bus;
     private readonly IValidator<LoginUserCommand> _loginValidator;
     private readonly IValidator<RegisterUserCommand> _registerValidator;
 
-    public AuthController(IMessageBus bus, IValidator<LoginUserCommand> loginValidator,
+    public AuthController(ICommandBus bus, IValidator<LoginUserCommand> loginValidator,
         IValidator<RegisterUserCommand> registerValidator)
     {
         _bus = bus;

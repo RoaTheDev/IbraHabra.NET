@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using IbraHabra.NET.Domain.Entity;
+using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;

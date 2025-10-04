@@ -14,12 +14,12 @@ namespace IbraHabra.NET.Adapter.Controller;
 [Route("api/auth/2fa")]
 public class TwoFactorController : ControllerBase
 {
-    private readonly IMessageBus _messageBus;
+    private readonly ICommandBus _commandBus;
     private readonly IHttpContextAccessor _contextAccessor;
 
-    public TwoFactorController(IMessageBus messageBus, IHttpContextAccessor contextAccessor)
+    public TwoFactorController(ICommandBus commandBus, IHttpContextAccessor contextAccessor)
     {
-        _messageBus = messageBus;
+        _commandBus = commandBus;
         _contextAccessor = contextAccessor;
     }
 
@@ -34,7 +34,7 @@ public class TwoFactorController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Verify2FaResponse>), 401)]
     public async Task<IActionResult> VerifyTwoFactor([FromBody] Verify2FaCommand command)
     {
-        var result = await _messageBus.InvokeAsync<ApiResult<Verify2FaResponse>>(command);
+        var result = await _commandBus.InvokeAsync<ApiResult<Verify2FaResponse>>(command);
         return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
     }
 
@@ -49,7 +49,7 @@ public class TwoFactorController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Setup2FaInfoResponse>), 401)]
     public async Task<IActionResult> InitializeSetup([FromBody] string clientId)
     {
-        var result = await _messageBus.InvokeAsync<ApiResult<Setup2FaInfoResponse>>(
+        var result = await _commandBus.InvokeAsync<ApiResult<Setup2FaInfoResponse>>(
             new Initialize2FaSetupCommand(_contextAccessor.HttpContext!.User, clientId));
         return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
     }
@@ -66,7 +66,7 @@ public class TwoFactorController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Enable2FaResponse>), 401)]
     public async Task<IActionResult> Enable([FromBody] Enable2FaCommand command)
     {
-        var result = await _messageBus.InvokeAsync<ApiResult<Enable2FaResponse>>(command);
+        var result = await _commandBus.InvokeAsync<ApiResult<Enable2FaResponse>>(command);
         return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
     }
 
@@ -82,7 +82,7 @@ public class TwoFactorController : ControllerBase
     public async Task<IActionResult> Disable([FromBody] string clientId)
     {
         var result =
-            await _messageBus.InvokeAsync<ApiResult>(
+            await _commandBus.InvokeAsync<ApiResult>(
                 new Disable2FaCommand(_contextAccessor.HttpContext!.User, clientId));
         return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
     }
@@ -100,7 +100,7 @@ public class TwoFactorController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Setup2FaComplianceResponse>), 401)]
     public async Task<IActionResult> InitializeCompliance([FromBody] Setup2FaComplianceCommand command)
     {
-        var result = await _messageBus.InvokeAsync<ApiResult<Setup2FaComplianceResponse>>(command);
+        var result = await _commandBus.InvokeAsync<ApiResult<Setup2FaComplianceResponse>>(command);
         return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
     }
 
@@ -116,7 +116,7 @@ public class TwoFactorController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Enable2FaComplianceResponse>), 401)]
     public async Task<IActionResult> EnableCompliance([FromBody] Enable2FaComplianceCommand command)
     {
-        var result = await _messageBus.InvokeAsync<ApiResult<Enable2FaComplianceResponse>>(command);
+        var result = await _commandBus.InvokeAsync<ApiResult<Enable2FaComplianceResponse>>(command);
         return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
     }
 }

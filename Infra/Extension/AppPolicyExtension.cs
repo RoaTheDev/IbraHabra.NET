@@ -1,8 +1,11 @@
 using System.Collections.Immutable;
-using IbraHabra.NET.Domain.Entity;
+using System.Text;
+using IbraHabra.NET.Domain.Entities;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 
@@ -36,6 +39,35 @@ public static class AppPolicyExtension
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
+
+        // Add JWT Authentication for Admin endpoints
+        var jwtSecret = config["Jwt:Secret"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
+        if (!string.IsNullOrEmpty(jwtSecret))
+        {
+            var key = Encoding.UTF8.GetBytes(jwtSecret);
+            
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false; // Set to true in production
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = config["Jwt:Issuer"] ?? "IbraHabra",
+                    ValidateAudience = true,
+                    ValidAudience = config["Jwt:Audience"] ?? "IbraHabra.Admin",
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+        }
     }
 
     public static void AddOpenIdDictConfig(this IServiceCollection services)

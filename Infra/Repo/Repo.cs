@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using FastExpressionCompiler;
-using IbraHabra.NET.Domain.SharedKernel.Interface;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
@@ -57,6 +57,17 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
     {
         return await _dbSet.FindAsync(id);
     }
+    public async Task<IEnumerable<TEntity>> GetAllViaConditionAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeFunc = null)
+    {
+        IQueryable<TEntity> query = _dbSet.AsNoTracking().Where(predicate);
+
+        if (includeFunc != null)
+            query = includeFunc(query);
+
+        return await query.ToListAsync();
+    }
 
     public async Task<TEntity?> GetViaConditionAsync(Expression<Func<TEntity, bool>> predicate)
     {
@@ -68,7 +79,27 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
     {
         return await _dbSet.AsNoTracking().Where(predicate).Select(projection).FirstOrDefaultAsync();
     }
-
+    public async Task<TEntity?> GetViaConditionAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc)
+    {
+        IQueryable<TEntity> query = _dbSet.AsNoTracking();
+    
+            query = includeFunc(query);
+    
+        return await query.Where(predicate).FirstOrDefaultAsync();
+    }
+public async Task<TProjection?> GetViaConditionAsync<TProjection>(
+    Expression<Func<TEntity, bool>> predicate,
+    Expression<Func<TEntity, TProjection>> projection,
+    Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc)
+{
+    IQueryable<TEntity> query = _dbSet.AsNoTracking();
+    
+        query = includeFunc(query);
+    
+    return await query.Where(predicate).Select(projection).FirstOrDefaultAsync();
+}
     public async Task<(IEnumerable<TProjection> Items, string? NextCursor)> GetByCursorAsync<TProjection>(
         string? cursor,
         int pageSize,

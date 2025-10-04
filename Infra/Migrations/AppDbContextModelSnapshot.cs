@@ -25,7 +25,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.AvailableScope", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.AvailableScope", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -57,7 +57,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("available_scopes", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Permission", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.Permission", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -76,7 +76,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("permissions", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectMember", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectMember", b =>
                 {
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
@@ -99,7 +99,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("project_members", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectRole", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectRole", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -125,7 +125,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("project_roles", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectRolePermission", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectRolePermission", b =>
                 {
                     b.Property<Guid>("ProjectRoleId")
                         .HasColumnType("uuid");
@@ -140,7 +140,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("project_role_permissions", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Projects", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.Projects", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -165,7 +165,6 @@ namespace IbraHabra.NET.Infra.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("HomePageUrl")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -187,7 +186,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("projects", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Role", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -220,7 +219,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("roles", "identity");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.User", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -299,7 +298,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("users", "identity");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserAuditTrail", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.UserAuditTrail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -374,7 +373,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("user_audit_trails", "realms");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.UserSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -606,7 +605,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
                     b.ToTable("oauth_applications", "identity", t =>
                         {
-                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
+                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "(\"Properties\"->'authPolicy'->>'minPasswordLength') IS NULL OR (\"Properties\"->'authPolicy'->>'minPasswordLength')::int >= 6");
                         });
 
                     b.HasDiscriminator().HasValue("OpenIddictEntityFrameworkCoreApplication");
@@ -757,7 +756,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.ToTable("oauth_tokens", "identity");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.OauthApplication", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.OauthApplication", b =>
                 {
                     b.HasBaseType("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication");
 
@@ -777,15 +776,15 @@ namespace IbraHabra.NET.Infra.Migrations
 
                     b.ToTable("oauth_applications", "identity", t =>
                         {
-                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "jsonb_path_exists(\"Properties\", '$.authPolicy.MinPasswordLength') AND (\"Properties\"::jsonb->'authPolicy'->>'MinPasswordLength')::int >= 6");
+                            t.HasCheckConstraint("CK_Client_MinPasswordLength", "(\"Properties\"->'authPolicy'->>'minPasswordLength') IS NULL OR (\"Properties\"->'authPolicy'->>'minPasswordLength')::int >= 6");
                         });
 
                     b.HasDiscriminator().HasValue("OauthApplication");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.AvailableScope", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.AvailableScope", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Projects", "Project")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Projects", "Project")
                         .WithMany("AvailableScopes")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -793,21 +792,21 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectMember", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectMember", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Projects", "Projects")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Projects", "Projects")
                         .WithMany("ProjectMembers")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IbraHabra.NET.Domain.Entity.ProjectRole", "ProjectRole")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.ProjectRole", "ProjectRole")
                         .WithMany("ProjectMembers")
                         .HasForeignKey("ProjectRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", "User")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -820,9 +819,9 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectRole", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectRole", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Projects", "Project")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Projects", "Project")
                         .WithMany("ProjectRoles")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -831,15 +830,15 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectRolePermission", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectRolePermission", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Permission", "Permission")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Permission", "Permission")
                         .WithMany()
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("IbraHabra.NET.Domain.Entity.ProjectRole", "ProjectRole")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.ProjectRole", "ProjectRole")
                         .WithMany("ProjectRolePermissions")
                         .HasForeignKey("ProjectRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -850,9 +849,9 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("ProjectRole");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserAuditTrail", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.UserAuditTrail", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", "User")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", "User")
                         .WithMany("UserAuditTrails")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -861,9 +860,9 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.UserSession", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.UserSession", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -872,7 +871,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Role", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -881,7 +880,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -890,7 +889,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -899,13 +898,13 @@ namespace IbraHabra.NET.Infra.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Role", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -914,7 +913,7 @@ namespace IbraHabra.NET.Infra.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.User", null)
+                    b.HasOne("IbraHabra.NET.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -945,9 +944,9 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("Authorization");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.OauthApplication", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.OauthApplication", b =>
                 {
-                    b.HasOne("IbraHabra.NET.Domain.Entity.Projects", "Projects")
+                    b.HasOne("IbraHabra.NET.Domain.Entities.Projects", "Projects")
                         .WithMany("OauthApplications")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -956,14 +955,14 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("Projects");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.ProjectRole", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.ProjectRole", b =>
                 {
                     b.Navigation("ProjectMembers");
 
                     b.Navigation("ProjectRolePermissions");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.Projects", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.Projects", b =>
                 {
                     b.Navigation("AvailableScopes");
 
@@ -974,7 +973,7 @@ namespace IbraHabra.NET.Infra.Migrations
                     b.Navigation("ProjectRoles");
                 });
 
-            modelBuilder.Entity("IbraHabra.NET.Domain.Entity.User", b =>
+            modelBuilder.Entity("IbraHabra.NET.Domain.Entities.User", b =>
                 {
                     b.Navigation("UserAuditTrails");
                 });

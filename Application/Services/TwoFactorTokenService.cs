@@ -1,4 +1,4 @@
-using IbraHabra.NET.Domain.SharedKernel.Interface.Services;
+using IbraHabra.NET.Domain.Contract.Services;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace IbraHabra.NET.Application.Services;

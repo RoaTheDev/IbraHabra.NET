@@ -1,9 +1,9 @@
 using System.Text.Json;
-using IbraHabra.NET.Domain.SharedKernel.ValueObject;
+using IbraHabra.NET.Domain.Constants.ValueObject;
 
 namespace IbraHabra.NET.Application.Utils;
 
-public class ReadAuthPolicy
+public static class ReadAuthPolicy
 {
     public static AuthPolicy GetAuthPolicy(string? properties)
     {
@@ -13,20 +13,24 @@ public class ReadAuthPolicy
         try
         {
             using var document = JsonDocument.Parse(properties);
+
             if (document.RootElement.TryGetProperty("authPolicy", out var policyElement))
             {
-                return JsonSerializer.Deserialize<AuthPolicy>(policyElement.GetRawText(), new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                }) ?? new AuthPolicy();
+                return JsonSerializer.Deserialize<AuthPolicy>(policyElement.GetRawText(),
+                           new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
+                       ?? new AuthPolicy();
             }
+
+            return JsonSerializer.Deserialize<AuthPolicy>(properties,
+                       new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
+                   ?? new AuthPolicy();
         }
         catch (JsonException)
         {
+            return new AuthPolicy();
         }
-
-        return new AuthPolicy();
     }
+
     public static (bool isPassed, string? errorMsg) ValidatePasswordAgainstPolicy(string password, AuthPolicy policy)
     {
         if (password.Length < policy.MinPasswordLength)
@@ -38,5 +42,4 @@ public class ReadAuthPolicy
             return (false, "password required a symbol.");
         return (true, null);
     }
-
 }

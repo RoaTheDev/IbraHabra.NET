@@ -1,0 +1,28 @@
+using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Entities;
+using Wolverine;
+
+namespace IbraHabra.NET.Application.UseCases.Admin.Commands.RemoveProjectRole;
+
+public record RemoveProjectRoleCommand(Guid ProjectId, Guid UserId);
+
+public class RemoveProjectRoleHandler : IWolverineHandler
+{
+    public static async Task<ApiResult> Handle(
+        RemoveProjectRoleCommand command,
+        IRepo<ProjectMember, ProjectMemberId> memberRepo,
+        IUnitOfWork unitOfWork)
+    {
+        var memberId = new ProjectMemberId(command.ProjectId, command.UserId);
+        var member = await memberRepo.GetViaIdAsync(memberId);
+
+        if (member == null)
+            return ApiResult.Fail(404, "User is not a member of this project.");
+
+        await memberRepo.DeleteAsync(m => m.Id == member.Id);
+        await unitOfWork.SaveChangesAsync();
+
+        return ApiResult.Ok();
+    }
+}

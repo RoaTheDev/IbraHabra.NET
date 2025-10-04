@@ -9,12 +9,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+       
         <PackageReference Include="dotenv.net" Version="4.0.0" />
         <PackageReference Include="FluentValidation" Version="12.0.0" />
         <PackageReference Include="Mapster" Version="7.4.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.14.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
           <PrivateAssets>all</PrivateAssets>
@@ -32,14 +36,12 @@
         <PackageReference Include="Scalar.AspNetCore" Version="2.8.6" />
         <PackageReference Include="System.Linq.Async" Version="6.0.3" />
         <PackageReference Include="WolverineFx" Version="4.12.2" />
-        <PackageReference Include="WolverineFx.EntityFrameworkCore" Version="4.12.2" />
-        <PackageReference Include="WolverineFx.RDBMS" Version="4.12.2" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Application\UseCases\Admin\" />
+      <Folder Include="Application\UseCases\Project\Commands\" />
       <Folder Include="Application\UseCases\Users\Queries\" />
-      <Folder Include="Domain\SharedKernel\" />
     </ItemGroup>
 
 </Project>

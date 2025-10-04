@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Security.Claims;
-using IbraHabra.NET.Domain.Entity;
-using IbraHabra.NET.Domain.SharedKernel.Interface;
+using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;

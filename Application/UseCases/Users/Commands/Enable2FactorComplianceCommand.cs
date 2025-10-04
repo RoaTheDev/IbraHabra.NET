@@ -1,6 +1,6 @@
 using IbraHabra.NET.Application.Dto.Response;
-using IbraHabra.NET.Domain.Entity;
-using IbraHabra.NET.Domain.SharedKernel.Interface.Services;
+using IbraHabra.NET.Domain.Contract.Services;
+using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 

@@ -1,7 +1,5 @@
 using FluentValidation;
 using IbraHabra.NET.Application.Utils;
-using IbraHabra.NET.Domain.Entity;
-using IbraHabra.NET.Domain.SharedKernel.ValueObject;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
 

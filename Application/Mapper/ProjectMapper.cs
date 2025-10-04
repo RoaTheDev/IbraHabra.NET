@@ -1,7 +1,7 @@
 using IbraHabra.NET.Application.Dto.Request.Project;
 using IbraHabra.NET.Application.UseCases.Project;
-using IbraHabra.NET.Application.UseCases.Project.CreateProject;
-using IbraHabra.NET.Application.UseCases.Project.UpdateProject;
+using IbraHabra.NET.Application.UseCases.Project.Commands.CreateProject;
+using IbraHabra.NET.Application.UseCases.Project.Commands.UpdateProject;
 using Mapster;
 
 namespace IbraHabra.NET.Application.Mapper;
