@@ -41,7 +41,8 @@ public class AdminApplicationsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] Guid? projectId, [FromQuery] string? cursor, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> List([FromQuery] Guid? projectId, [FromQuery] string? cursor,
+        [FromQuery] int pageSize = 20)
     {
         if (pageSize <= 0 || pageSize > 200)
             pageSize = 20;
@@ -139,7 +140,7 @@ public class AdminApplicationsController : ControllerBase
         }
 
         await _appManager.UpdateAsync(app, descriptor);
-        await _appRepo.UpdateAsync(a => a.ClientId == clientId,
+        await _appRepo.UpdateAsync(clientId,
             a => a.SetProperty(x => x.UpdatedAt, DateTime.UtcNow));
 
         return Ok(ApiResult.Ok());
@@ -150,7 +151,7 @@ public class AdminApplicationsController : ControllerBase
     public async Task<IActionResult> SetStatus([FromRoute] string clientId, [FromBody] SetStatusRequest request)
     {
         var updated = await _appRepo.UpdateAsync(
-            a => a.ClientId == clientId,
+            clientId,
             a => a
                 .SetProperty(x => x.IsActive, request.IsActive)
                 .SetProperty(x => x.UpdatedAt, DateTime.UtcNow));
@@ -176,7 +177,7 @@ public class AdminApplicationsController : ControllerBase
         descriptor.ClientSecret = newSecret;
 
         await _appManager.UpdateAsync(app, descriptor);
-        await _appRepo.UpdateAsync(a => a.ClientId == clientId,
+        await _appRepo.UpdateAsync(clientId,
             a => a.SetProperty(x => x.UpdatedAt, DateTime.UtcNow));
 
         var payload = new RotateSecretResponse(clientId, newSecret);

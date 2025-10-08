@@ -60,14 +60,15 @@ public class AdminAuthController : ControllerBase
 
         var result = await _bus.InvokeAsync<ApiResult<RefreshAdminTokenResponse>>(
             new RefreshAdminTokenCommand(token));
-    
+
         return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
     }
+
     /// <summary>
     /// Get current admin user information
     /// </summary>
     [HttpGet("me")]
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> GetCurrentAdmin()
     {
         var result = await _bus.InvokeAsync<ApiResult<AdminUserInfoResponse>>(new GetAdminUserInfoQuery());
@@ -78,7 +79,7 @@ public class AdminAuthController : ControllerBase
     /// Verify admin token validity
     /// </summary>
     [HttpGet("verify")]
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public IActionResult VerifyToken()
     {
         return Ok(ApiResult<object>.Ok(new { valid = true, message = "Token is valid" }));
@@ -88,7 +89,7 @@ public class AdminAuthController : ControllerBase
     /// Admin logout - invalidates the current session
     /// </summary>
     [HttpPost("logout")]
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Policy = "AdminOnly")]
     public IActionResult Logout()
     {
         return Ok(ApiResult.Ok());

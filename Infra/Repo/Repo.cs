@@ -23,15 +23,15 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
     }
 
     public async Task<int> UpdateAsync(
-        Expression<Func<TEntity, bool>> predicate,
+        TKey id,
         Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> updateExpression)
     {
-        return await _dbSet.Where(predicate).Take(1).ExecuteUpdateAsync(updateExpression);
+        return await _dbSet.Where(GetPkPredicate(id)).ExecuteUpdateAsync(updateExpression);
     }
 
-    public async Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+    public async Task<int> DeleteAsync(TKey id)
     {
-        return await _dbSet.Where(predicate).Take(1).ExecuteDeleteAsync();
+        return await _dbSet.Where(GetPkPredicate(id)).ExecuteDeleteAsync();
     }
 
     public async Task BatchAddAsync(IEnumerable<TEntity> entities)
@@ -57,6 +57,7 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
     {
         return await _dbSet.FindAsync(id);
     }
+
     public async Task<IEnumerable<TEntity>> GetAllViaConditionAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeFunc = null)
@@ -79,27 +80,30 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
     {
         return await _dbSet.AsNoTracking().Where(predicate).Select(projection).FirstOrDefaultAsync();
     }
+
     public async Task<TEntity?> GetViaConditionAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc)
     {
         IQueryable<TEntity> query = _dbSet.AsNoTracking();
-    
-            query = includeFunc(query);
-    
+
+        query = includeFunc(query);
+
         return await query.Where(predicate).FirstOrDefaultAsync();
     }
-public async Task<TProjection?> GetViaConditionAsync<TProjection>(
-    Expression<Func<TEntity, bool>> predicate,
-    Expression<Func<TEntity, TProjection>> projection,
-    Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc)
-{
-    IQueryable<TEntity> query = _dbSet.AsNoTracking();
-    
+
+    public async Task<TProjection?> GetViaConditionAsync<TProjection>(
+        Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TEntity, TProjection>> projection,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc)
+    {
+        IQueryable<TEntity> query = _dbSet.AsNoTracking();
+
         query = includeFunc(query);
-    
-    return await query.Where(predicate).Select(projection).FirstOrDefaultAsync();
-}
+
+        return await query.Where(predicate).Select(projection).FirstOrDefaultAsync();
+    }
+
     public async Task<(IEnumerable<TProjection> Items, string? NextCursor)> GetByCursorAsync<TProjection>(
         string? cursor,
         int pageSize,
@@ -294,5 +298,23 @@ public async Task<TProjection?> GetViaConditionAsync<TProjection>(
             throw new ArgumentException(
                 $"Invalid cursor format: {cursor} cannot be converted to {targetType.Name}", nameof(cursor), ex);
         }
+    }
+
+    private Expression<Func<TEntity, bool>> GetPkPredicate(TKey id)
+    {
+        var entityType = _dbSet.EntityType;
+        var primaryKey = entityType.FindPrimaryKey()?.Properties.FirstOrDefault();
+
+        if (primaryKey == null)
+            throw new InvalidOperationException($"No primary key found for entity type {typeof(TEntity).Name}");
+
+        var pkPropertyName = primaryKey.Name;
+
+        var parameter = Expression.Parameter(typeof(TEntity), "e");
+        var property = Expression.Property(parameter, pkPropertyName);
+        var constant = Expression.Constant(id, typeof(TKey));
+        var equals = Expression.Equal(property, constant);
+
+        return Expression.Lambda<Func<TEntity, bool>>(equals, parameter);
     }
 }

@@ -17,7 +17,7 @@ public class UpdateProjectHandler : IWolverineHandler
 {
     public static async Task<ApiResult> Handle(UpdateProjectCommand command, IRepo<Projects, Guid> repo)
     {
-        int result = await repo.UpdateAsync(x => x.Id == command.Id,
+        int result = await repo.UpdateAsync(command.Id,
             c => c.SetProperty(p => p.DisplayName, command.DisplayName)
                 .SetProperty(p => p.Description, command.Description)
                 .SetProperty(p => p.HomePageUrl, command.HomePageUrl)

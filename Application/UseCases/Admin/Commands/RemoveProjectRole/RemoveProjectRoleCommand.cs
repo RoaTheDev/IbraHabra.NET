@@ -20,7 +20,7 @@ public class RemoveProjectRoleHandler : IWolverineHandler
         if (member == null)
             return ApiResult.Fail(404, "User is not a member of this project.");
 
-        await memberRepo.DeleteAsync(m => m.Id == member.Id);
+        await memberRepo.DeleteAsync(member.Id);
         await unitOfWork.SaveChangesAsync();
 
         return ApiResult.Ok();

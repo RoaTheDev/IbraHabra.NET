@@ -11,9 +11,11 @@ public interface IRepo<TEntity, in TKey>
     Task<IEnumerable<TEntity>> GetAllViaConditionAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeFunc = null);
+
     Task<TEntity?> GetViaConditionAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc);
+
     Task<TProjection?> GetViaConditionAsync<TProjection>(Expression<Func<TEntity, bool>> predicate,
         Expression<Func<TEntity, TProjection>> projection);
 
@@ -28,10 +30,10 @@ public interface IRepo<TEntity, in TKey>
     Task<TEntity> AddAsync(TEntity entity);
 
     Task<int> UpdateAsync(
-        Expression<Func<TEntity, bool>> predicate,
+        TKey id,
         Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> updateExpression);
 
-    Task<int> DeleteAsync(Expression<Func<TEntity, bool>> predicate);
+    Task<int> DeleteAsync(TKey id);
 
     Task BatchAddAsync(IEnumerable<TEntity> entities);
 

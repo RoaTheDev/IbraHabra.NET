@@ -24,11 +24,11 @@ public class DeleteProjectRoleHandler : IWolverineHandler
             return ApiResult.Fail(404, "Project role not found.");
 
         if (role.ProjectMembers.Any())
-            return ApiResult.Fail(409, 
+            return ApiResult.Fail(409,
                 $"Cannot delete role. It is assigned to {role.ProjectMembers.Count} member(s). " +
                 "Please reassign or remove these members first.");
 
-        await roleRepo.DeleteAsync(r => r.Id == role.Id);
+        await roleRepo.DeleteAsync(role.Id);
 
         await unitOfWork.SaveChangesAsync();
 

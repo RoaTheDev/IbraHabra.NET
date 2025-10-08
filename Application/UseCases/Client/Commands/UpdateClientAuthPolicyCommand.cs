@@ -27,15 +27,14 @@ public class UpdateClientAuthPolicyHandler : IWolverineHandler
             );
         }
 
-       
+
         var policyJson = JsonSerializer.Serialize(authPolicy, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
         var rowsAffected = await appRepo.UpdateAsync(
-            a => a.ClientId == command.ClientId,
-            a => a
+            command.ClientId, a => a
                 .SetProperty(x => x.UpdatedAt, DateTime.UtcNow)
                 .SetProperty(x => x.Properties, policyJson)
         );

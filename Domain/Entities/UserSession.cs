@@ -13,7 +13,7 @@ public class UserSession : IEntity<Guid>
     public string Country { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
-    public bool IsTrusted { get; set; } = false;
-    public bool IsCurrent { get; set; } = false;
+    public bool IsTrusted { get; set; }
+    public bool IsCurrent { get; set; }
     public DateTime? TrustedAt { get; set; }
 }
