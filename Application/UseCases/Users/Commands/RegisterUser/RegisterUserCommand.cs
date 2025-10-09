@@ -1,6 +1,5 @@
 using System.Text.Json;
 using IbraHabra.NET.Application.Dto.Response;
-using IbraHabra.NET.Application.Services;
 using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
@@ -12,63 +11,88 @@ namespace IbraHabra.NET.Application.UseCases.Users.Commands.RegisterUser;
 
 public record RegisterUserCommand(string Email, string Password, string? FirstName, string? LastName, string ClientId);
 
-public record RegisterUserCommandResponse(Guid Id);
+public record RegisterUserCommandResponse(Guid Id, bool RequiresEmailConfirmation);
 
 public class RegisterUserHandler : IWolverineHandler
 {
     public static async Task<ApiResult<RegisterUserCommandResponse>> Handle(
         RegisterUserCommand command,
-        IRepo<OauthApplication, string> repo,
+        IRepo<OauthApplication, string> oauthAppRepo,
         UserManager<User> userManager,
-        IEmailService emailService)
+        IPasswordHasher<User> passwordHasher
+        // , IEmailService emailService
+        )
     {
-        if (string.IsNullOrEmpty(command.Email) || string.IsNullOrEmpty(command.Password))
-            return ApiResult<RegisterUserCommandResponse>.Fail(400, "Email and Password are required.");
-
-        var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive,
+      
+        var client = await oauthAppRepo.GetViaConditionAsync(
+            c => c.ClientId == command.ClientId && c.IsActive,
             c => new AuthPolicyAndRedirectUriProjections(c.Properties, c.RedirectUris));
 
         if (client == null)
-            return ApiResult<RegisterUserCommandResponse>.Fail(400, "Invalid or inactive client.");
-
-        if (await userManager.FindByEmailAsync(command.Email) != null)
-            return ApiResult<RegisterUserCommandResponse>.Fail(409, "Email already registered");
+            return ApiResult<RegisterUserCommandResponse>.Fail(400, "Invalid or inactive client application.");
 
         var policy = ReadAuthPolicy.GetAuthPolicy(client.Properties);
+        var passwordValidation = ReadAuthPolicy.ValidatePasswordAgainstPolicy(command.Password, policy);
+        
+        if (!passwordValidation.isPassed)
+            return ApiResult<RegisterUserCommandResponse>.Fail(400, passwordValidation.errorMsg!);
 
-
-        var passwordValidationRes = ReadAuthPolicy.ValidatePasswordAgainstPolicy(command.Password, policy);
-        if (!passwordValidationRes.isPassed)
-            return ApiResult<RegisterUserCommandResponse>.Fail(400, passwordValidationRes.errorMsg!);
+        var existingUser = await userManager.FindByEmailAsync(command.Email);
+        if (existingUser != null)
+            return ApiResult<RegisterUserCommandResponse>.Fail(409, "Email already registered.");
 
         var user = new User
         {
             UserName = command.Email,
             Email = command.Email,
             FirstName = command.FirstName,
-            LastName = command.LastName
+            LastName = command.LastName,
+            EmailConfirmed = !policy.RequireEmailVerification,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            PasswordHash = passwordHasher.HashPassword(null!, command.Password)
         };
 
-        var result = await userManager.CreateAsync(user, command.Password);
+        var result = await userManager.CreateAsync(user);
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            return ApiResult<RegisterUserCommandResponse>.Fail(400, errors);
+            return ApiResult<RegisterUserCommandResponse>.Fail(400, $"Failed to create user: {errors}");
         }
 
-        if (policy.RequireEmailVerification)
-        {
-            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        // 7. Handle email verification if required (fire-and-forget for better UX)
+        // if (policy.RequireEmailVerification)
+        // {
+        //     // Use Task.Run to avoid DbContext issues in background task
+        //     _ = Task.Run(async () =>
+        //     {
+        //         try
+        //         {
+        //             var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        //             var redirectUris = ParseRedirectUris(client.RedirectUris);
+        //             var redirectUri = redirectUris.FirstOrDefault();
+        //
+        //             if (!string.IsNullOrEmpty(redirectUri))
+        //             {
+        //                 var confirmationLink = BuildConfirmationLink(redirectUri, command.Email, token, command.ClientId);
+        //                 await emailService.SendConfirmationEmailAsync(command.Email, confirmationLink);
+        //             }
+        //         }
+        //         catch
+        //         {
+        //             // Log error but don't fail registration
+        //             // TODO: Add ILogger for production monitoring
+        //         }
+        //     });
+        // }
 
-            var redirectUris = ParseRedirectUris(client.RedirectUris);
-            var redirectUri = redirectUris.FirstOrDefault() ?? "https://yourdomain.com";
+        return ApiResult<RegisterUserCommandResponse>.Ok(
+            new RegisterUserCommandResponse(user.Id, policy.RequireEmailVerification));
+    }
 
-            var confirmationLink =
-                $"{redirectUri}/confirm-email?email={command.Email}&token={Uri.EscapeDataString(token)}&clientId={command.ClientId}";
-            await emailService.SendConfirmationEmailAsync(command.Email, confirmationLink);
-        }
-
-        return ApiResult<RegisterUserCommandResponse>.Ok(new(user.Id));
+    private static string BuildConfirmationLink(string redirectUri, string email, string token, string clientId)
+    {
+        redirectUri = redirectUri.TrimEnd('/');
+        return $"{redirectUri}/confirm-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}&clientId={Uri.EscapeDataString(clientId)}";
     }
 
     private static List<string> ParseRedirectUris(string? redirectUrisJson)
@@ -78,8 +102,7 @@ public class RegisterUserHandler : IWolverineHandler
 
         try
         {
-            var uris = JsonSerializer.Deserialize<List<string>>(redirectUrisJson);
-            return uris ?? new List<string>();
+            return JsonSerializer.Deserialize<List<string>>(redirectUrisJson) ?? new List<string>();
         }
         catch (JsonException)
         {

@@ -1,3 +1,4 @@
+using FluentValidation;
 using IbraHabra.NET.Infra.Docs;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +37,7 @@ public static class ExternalExtensions
             opts.UseOpenIddict();
 
             opts.UseLazyLoadingProxies();
-        }, ServiceLifetime.Singleton);
+        });
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>("database");
@@ -61,4 +62,7 @@ public static class ExternalExtensions
             );
         });
     }
+
+    public static void AddFluentConfig(this IServiceCollection services) =>
+        services.AddValidatorsFromAssemblyContaining<Program>();
 }

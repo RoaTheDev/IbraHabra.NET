@@ -14,6 +14,7 @@ var env = builder.Environment;
 
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();
+builder.Services.AddFluentConfig();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddDatabaseConfig(config);
 builder.Services.AddOpenIdDictConfig(config, env);
