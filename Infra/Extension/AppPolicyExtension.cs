@@ -41,34 +41,34 @@ public static class AppPolicyExtension
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
-        
+
         // ADMIN JWT - Keep Symmetric (HMAC-SHA256)
         var jwtSecret = config["JWT:SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
         if (!string.IsNullOrEmpty(jwtSecret))
         {
             var key = Encoding.UTF8.GetBytes(jwtSecret);
-            
+
             services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer( options =>
-            {
-                options.RequireHttpsMetadata = config.GetValue("JWT:REQUIRE_HTTPS", true);
-                options.SaveToken = true;
-                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = true,
-                    ValidIssuer = config["JWT:ISSUER"] ?? "IbraHabra",
-                    ValidateAudience = true,
-                    ValidAudience = config["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator",
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddJwtBearer(options =>
+                {
+                    options.RequireHttpsMetadata = config.GetValue("JWT:REQUIRE_HTTPS", true);
+                    options.SaveToken = true;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(key),
+                        ValidateIssuer = true,
+                        ValidIssuer = config["JWT:ISSUER"] ?? "IbraHabra",
+                        ValidateAudience = true,
+                        ValidAudience = config["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator",
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
         }
 
         services.AddAuthorization(options =>
@@ -87,7 +87,7 @@ public static class AppPolicyExtension
         });
     }
 
-    public static void AddOpenIdDictConfig(this IServiceCollection services, IConfiguration config, 
+    public static void AddOpenIdDictConfig(this IServiceCollection services, IConfiguration config,
         IWebHostEnvironment env)
     {
         services.AddOpenIddict()
@@ -123,14 +123,16 @@ public static class AppPolicyExtension
                 if (env.IsProduction())
                 {
                     var certPath = config["OpenIddict:Certificate:Path"];
-                    var certPassword = config["OpenIddict:Certificate:Password"] 
-                                      ?? Environment.GetEnvironmentVariable("CERT_PASSWORD");
+                    var certPassword = config["OpenIddict:Certificate:Password"]
+                                       ?? Environment.GetEnvironmentVariable("CERT_PASSWORD");
 
                     if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath))
                     {
                         // Use X509CertificateLoader (new API in .NET 8+)
 
-                        var certificate = X509CertificateLoader.LoadPkcs12FromFile(certPath, !string.IsNullOrEmpty(certPassword) ? certPassword : null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                        var certificate = X509CertificateLoader.LoadPkcs12FromFile(certPath,
+                            !string.IsNullOrEmpty(certPassword) ? certPassword : null,
+                            X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                         opts.AddEncryptionCertificate(certificate)
                             .AddSigningCertificate(certificate);
@@ -141,13 +143,13 @@ public static class AppPolicyExtension
                         var rsa = RSA.Create(2048);
                         var signingKey = new RsaSecurityKey(rsa) { KeyId = Guid.NewGuid().ToString() };
                         opts.AddSigningKey(signingKey);
-                        
+
                         var encryptionRsa = RSA.Create(2048);
                         var encryptionKey = new RsaSecurityKey(encryptionRsa) { KeyId = Guid.NewGuid().ToString() };
                         opts.AddEncryptionKey(encryptionKey);
-                        
+
                         Console.WriteLine("⚠️  WARNING: Using dynamically generated RSA keys. " +
-                                        "Keys will change on restart. Use persistent certificates in production!");
+                                          "Keys will change on restart. Use persistent certificates in production!");
                     }
                 }
                 else
@@ -196,7 +198,7 @@ public static class AppPolicyExtension
 
                         var token = await manager.FindByReferenceIdAsync(
                             context.Request.RefreshToken ?? string.Empty, CancellationToken.None);
-                        
+
                         if (token == null)
                         {
                             context.Reject(
@@ -228,12 +230,12 @@ public static class AppPolicyExtension
 
                         await manager.TryRedeemAsync(token, CancellationToken.None);
                     }));
-                
+
                 // Revoke old refresh token after successful refresh
                 opts.AddEventHandler<OpenIddictServerEvents.ApplyTokenResponseContext>(builders =>
                     builders.UseInlineHandler(async context =>
                     {
-                        if (context.Request?.IsRefreshTokenGrantType() == true && 
+                        if (context.Request?.IsRefreshTokenGrantType() == true &&
                             context.Request.RefreshToken != null)
                         {
                             var manager = context.Transaction.GetHttpRequest()

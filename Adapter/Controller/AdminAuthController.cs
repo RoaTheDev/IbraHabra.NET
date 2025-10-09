@@ -1,4 +1,7 @@
 using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.UseCases.Admin.Commands.Confirm2FaAdmin;
+using IbraHabra.NET.Application.UseCases.Admin.Commands.Disable2FaAdmin;
+using IbraHabra.NET.Application.UseCases.Admin.Commands.Enable2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RefreshAdminToken;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Verify2FaAdmin;
@@ -31,6 +34,40 @@ public class AdminAuthController : ControllerBase
     {
         var result = await _bus.InvokeAsync<ApiResult<LoginAdminCommandResponse>>(command);
         return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, result.Error);
+    }
+
+    /// <summary>
+    /// Enable 2FA - Step 1: Generate QR code and recovery codes
+    /// Returns shared key, authenticator URI, and recovery codes
+    /// </summary>
+    [HttpPost("2fa/enable")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Enable2Fa()
+    {
+        var result = await _bus.InvokeAsync<ApiResult<Enable2FaAdminResponse>>(new Enable2FaAdminCommand());
+        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+    }
+
+    /// <summary>
+    /// Enable 2FA - Step 2: Confirm with verification code from authenticator app
+    /// </summary>
+    [HttpPost("2fa/enable/confirm")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> ConfirmEnable2Fa([FromBody] ConfirmEnable2FaAdminCommand command)
+    {
+        var result = await _bus.InvokeAsync<ApiResult<ConfirmEnable2FaAdminResponse>>(command);
+        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+    }
+
+    /// <summary>
+    /// Disable 2FA - Requires password confirmation
+    /// </summary>
+    [HttpPost("2fa/disable")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Disable2Fa([FromBody] Disable2FaAdminCommand command)
+    {
+        var result = await _bus.InvokeAsync<ApiResult<Disable2FaAdminResponse>>(command);
+        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
     }
 
     /// <summary>
