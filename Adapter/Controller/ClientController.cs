@@ -1,5 +1,7 @@
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Client.Commands;
+using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
+using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientAuthPolicy;
 using IbraHabra.NET.Application.UseCases.Client.Queries;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using Microsoft.AspNetCore.Mvc;

@@ -16,5 +16,5 @@ public static class InternalServiceRegistry
     public static void RegisterServices(this IServiceCollection services) =>
         services.AddScoped<ICurrentUserService, CurrentUserService>()
             .AddScoped<ITwoFactorTokenService, TwoFactorTokenService>()
-            .AddScoped<IValidator<LoginAdminCommand>, LoginAdminValidator>();
+            .AddScoped<IClientSecretHasher, ClientSecretHasher>();
 }

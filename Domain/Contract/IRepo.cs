@@ -1,9 +1,10 @@
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Query;
 
 namespace IbraHabra.NET.Domain.Contract;
 
-public interface IRepo<TEntity, in TKey>
+public interface IRepo<TEntity, in TKey> where TEntity : class
 {
     Task<TEntity?> GetViaIdAsync(TKey id);
     Task<TEntity?> GetViaConditionAsync(Expression<Func<TEntity, bool>> predicate);
@@ -32,6 +33,8 @@ public interface IRepo<TEntity, in TKey>
     Task<int> UpdateAsync(
         TKey id,
         Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> updateExpression);
+
+    public void Update(TEntity entity);
 
     Task<int> DeleteAsync(TKey id);
 

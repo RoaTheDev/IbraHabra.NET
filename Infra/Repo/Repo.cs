@@ -3,6 +3,7 @@ using FastExpressionCompiler;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Query;
 
 namespace IbraHabra.NET.Infra.Repo;
@@ -27,6 +28,11 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
         Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> updateExpression)
     {
         return await _dbSet.Where(GetPkPredicate(id)).ExecuteUpdateAsync(updateExpression);
+    }
+
+    public void Update(TEntity entity)
+    {
+        _dbSet.Update(entity);
     }
 
     public async Task<int> DeleteAsync(TKey id)

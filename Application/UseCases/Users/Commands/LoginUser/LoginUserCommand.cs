@@ -28,14 +28,14 @@ public class LoginUserHandler : IWolverineHandler
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive, c =>
             new AuthPolicyProjections(c.Properties));
 
-        if (client is  null)
+        if (client is null)
             return ApiResult<LoginUserCommandResponse>.Fail(400, "Invalid client.");
 
         var user = await userManager.FindByEmailAsync(command.Email);
         if (user == null)
             return ApiResult<LoginUserCommandResponse>.Fail(401, "Invalid credentials.");
 
-        var policy = ReadAuthPolicy.GetAuthPolicy(client?.Properties);
+        var policy = ReadAuthPolicy.GetAuthPolicy(client.Properties);
 
         var passwordValidationRes = ReadAuthPolicy.ValidatePasswordAgainstPolicy(command.Password, policy);
         if (!passwordValidationRes.isPassed)

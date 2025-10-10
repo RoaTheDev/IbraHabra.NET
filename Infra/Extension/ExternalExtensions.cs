@@ -46,6 +46,7 @@ public static class ExternalExtensions
     public static void AddWolverineConfig(this IHostBuilder hostBuilder) => hostBuilder.UseWolverine(opts =>
     {
         opts.Durability.Mode = DurabilityMode.MediatorOnly;
+        
     });
 
 

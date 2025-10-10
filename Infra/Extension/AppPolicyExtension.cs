@@ -2,11 +2,14 @@ using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
@@ -105,7 +108,9 @@ public static class AppPolicyExtension
                     .AllowRefreshTokenFlow()
                     .AllowClientCredentialsFlow();
 
-                opts.RequireProofKeyForCodeExchange();
+                // SECURITY: Enable PKCE globally or ensure all public clients enforce it
+                // Uncomment if all public clients should require PKCE:
+                // opts.RequireProofKeyForCodeExchange();
 
                 opts.UseReferenceAccessTokens();
                 opts.UseReferenceRefreshTokens();
@@ -116,8 +121,9 @@ public static class AppPolicyExtension
                     OpenIddictConstants.Scopes.Roles
                 );
 
+                // IMPROVED: Shorter refresh token lifetime
                 opts.SetAccessTokenLifetime(TimeSpan.FromMinutes(30));
-                opts.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
+                opts.SetRefreshTokenLifetime(TimeSpan.FromDays(7)); // Changed from 14 to 7 days
 
                 // PRODUCTION: Use proper certificates with asymmetric keys (RSA)
                 if (env.IsProduction())
@@ -128,8 +134,6 @@ public static class AppPolicyExtension
 
                     if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath))
                     {
-                        // Use X509CertificateLoader (new API in .NET 8+)
-
                         var certificate = X509CertificateLoader.LoadPkcs12FromFile(certPath,
                             !string.IsNullOrEmpty(certPassword) ? certPassword : null,
                             X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
@@ -139,17 +143,10 @@ public static class AppPolicyExtension
                     }
                     else
                     {
-                        // Generate RSA keys if no certificate provided
-                        var rsa = RSA.Create(2048);
-                        var signingKey = new RsaSecurityKey(rsa) { KeyId = Guid.NewGuid().ToString() };
-                        opts.AddSigningKey(signingKey);
-
-                        var encryptionRsa = RSA.Create(2048);
-                        var encryptionKey = new RsaSecurityKey(encryptionRsa) { KeyId = Guid.NewGuid().ToString() };
-                        opts.AddEncryptionKey(encryptionKey);
-
-                        Console.WriteLine("⚠️  WARNING: Using dynamically generated RSA keys. " +
-                                          "Keys will change on restart. Use persistent certificates in production!");
+                        // SECURITY FIX: Throw error instead of using dynamic keys
+                        throw new InvalidOperationException(
+                            "Production environment requires a certificate. " +
+                            "Set OpenIddict:Certificate:Path in configuration or provide a certificate file.");
                     }
                 }
                 else
@@ -164,8 +161,92 @@ public static class AppPolicyExtension
                     .EnableTokenEndpointPassthrough()
                     .EnableEndSessionEndpointPassthrough()
                     .EnableUserInfoEndpointPassthrough()
-                    .EnableStatusCodePagesIntegration();
+                    .EnableErrorPassthrough()
+                    .DisableTransportSecurityRequirement();
 
+                // SECURITY: Add token validation for security stamp
+                opts.AddEventHandler<OpenIddictServerEvents.ValidateTokenContext>(builder =>
+                    builder.UseInlineHandler(async context =>
+                    {
+                        if (context.Principal == null) return;
+
+                        var userManager = context.Transaction.GetHttpRequest()
+                            ?.HttpContext.RequestServices.GetRequiredService<UserManager<User>>();
+
+                        if (userManager == null) return;
+
+                        var userId = context.Principal.GetClaim(OpenIddictConstants.Claims.Subject);
+                        if (string.IsNullOrEmpty(userId)) return;
+
+                        var user = await userManager.FindByIdAsync(userId);
+                        if (user == null)
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidToken,
+                                description: "The token is no longer valid.");
+                            return;
+                        }
+
+                        // Validate security stamp
+                        var tokenStamp = context.Principal.FindFirst("AspNet.Identity.SecurityStamp")?.Value;
+                        var currentStamp = await userManager.GetSecurityStampAsync(user);
+
+                        if (tokenStamp != currentStamp)
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidToken,
+                                description: "The token is no longer valid.");
+                        }
+                    }));
+                
+                //  THIS EVENT HANDLER FOR CLIENT AUTHENTICATION
+                opts.AddEventHandler<OpenIddictServerEvents.ValidateTokenRequestContext>(builder =>
+                    builder.UseInlineHandler(async context =>
+                    {
+                        // Only validate for confidential clients
+                        if (context.Request.ClientId == null)
+                            return;
+
+                        var clientRepo = context.Transaction.GetHttpRequest()!
+                            .HttpContext.RequestServices.GetRequiredService<IRepo<OauthApplication, string>>();
+
+                        var secretHasher = context.Transaction.GetHttpRequest()!
+                            .HttpContext.RequestServices.GetRequiredService<IClientSecretHasher>();
+
+                        var client = await clientRepo.GetViaConditionAsync(c =>
+                            c.ClientId == context.Request.ClientId && c.IsActive);
+
+                        if (client == null)
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidClient,
+                                description: "The client application was not found.");
+                            return;
+                        }
+
+                        // Public clients don't need authentication
+                        if (client.ClientType == OpenIddictConstants.ClientTypes.Public)
+                            return;
+
+                        // Confidential clients must authenticate
+                        var clientSecret = context.Request.ClientSecret;
+                        if (string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(client.ClientSecret))
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidClient,
+                                description: "Client authentication failed.");
+                            return;
+                        }
+
+                        // ✅ VERIFY THE HASHED SECRET
+                        if (!secretHasher.VerifySecret(clientSecret, client.ClientSecret))
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidClient,
+                                description: "Client authentication failed.");
+                            return;
+                        }
+                    }));
                 // Custom claims handler
                 opts.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(builder =>
                     builder.UseInlineHandler(async context =>
@@ -175,14 +256,19 @@ public static class AppPolicyExtension
 
                         if (context.Principal != null)
                         {
-                            var user = await userManager.FindByIdAsync(
-                                context.Principal.GetClaim(OpenIddictConstants.Claims.Subject) ?? string.Empty);
+                            var userId = context.Principal.GetClaim(OpenIddictConstants.Claims.Subject);
+                            if (string.IsNullOrEmpty(userId)) return;
 
+                            var user = await userManager.FindByIdAsync(userId);
                             if (user != null)
                             {
                                 var roles = await userManager.GetRolesAsync(user);
                                 context.Principal.SetClaims(OpenIddictConstants.Claims.Role,
                                     roles.ToImmutableArray());
+
+                                // Add security stamp to token for validation
+                                var securityStamp = await userManager.GetSecurityStampAsync(user);
+                                context.Principal.SetClaim("AspNet.Identity.SecurityStamp", securityStamp);
                             }
                         }
                     }));
@@ -203,7 +289,7 @@ public static class AppPolicyExtension
                         {
                             context.Reject(
                                 error: OpenIddictConstants.Errors.InvalidGrant,
-                                description: "The refresh token is no longer valid.");
+                                description: "The refresh token is invalid.");
                             return;
                         }
 
@@ -216,6 +302,7 @@ public static class AppPolicyExtension
                             var subject = await manager.GetSubjectAsync(token, CancellationToken.None);
                             if (subject != null)
                             {
+                                // Revoke all tokens for this user due to suspected token theft
                                 await foreach (var t in manager.FindBySubjectAsync(subject, CancellationToken.None))
                                 {
                                     await manager.TryRevokeAsync(t, CancellationToken.None);
@@ -224,7 +311,7 @@ public static class AppPolicyExtension
 
                             context.Reject(
                                 error: OpenIddictConstants.Errors.InvalidGrant,
-                                description: "Possible token theft detected. All sessions revoked.");
+                                description: "The refresh token is invalid.");
                             return;
                         }
 
@@ -255,5 +342,15 @@ public static class AppPolicyExtension
                         }
                     }));
             });
+
+        // OPTIONAL: Add rate limiting for token endpoint
+        // services.AddRateLimiter(options =>
+        // {
+        //     options.AddFixedWindowLimiter("token", opt =>
+        //     {
+        //         opt.Window = TimeSpan.FromMinutes(1);
+        //         opt.PermitLimit = 10;
+        //     });
+        // });
     }
 }
