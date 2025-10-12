@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Client.Commands;
 using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
@@ -26,10 +27,9 @@ public class ClientController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateClient([FromBody] CreateClientCommand command)
     {
-
         var result = await _messageBus.InvokeAsync<ApiResult<CreateClientResponse>>(command);
         return result.IsSuccess
-            ? CreatedAtAction(nameof(GetClient),new { clientId = result.Value!.Id }, result.Value)
+            ? CreatedAtAction(nameof(GetClient), new { clientId = result.Value!.Id }, result.Value)
             : StatusCode(result.StatusCode, result.Error);
     }
 
@@ -67,4 +67,5 @@ public class ClientController : ControllerBase
             new GetClientAuthPolicyQuery(clientId));
         return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
     }
+
 }
