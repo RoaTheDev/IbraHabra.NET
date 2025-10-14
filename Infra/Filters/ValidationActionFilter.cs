@@ -1,79 +1,95 @@
 using FluentValidation;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
+using IbraHabra.NET.Domain.Contract;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace IbraHabra.NET.Infra.Filters;
 
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public class ValidateModelAttribute : ActionFilterAttribute
+[AttributeUsage(AttributeTargets.Method)]
+public class ValidateModelAttribute<TModel> : ActionFilterAttribute
+    where TModel : class
 {
-    private readonly Type _validatorType;
-
-    public ValidateModelAttribute(Type validatorType)
-    {
-        _validatorType = validatorType;
-    }
-
     public override async Task OnActionExecutionAsync(
         ActionExecutingContext context,
         ActionExecutionDelegate next)
     {
-        var serviceProvider = context.HttpContext.RequestServices;
-
-        // Get the validator from DI
-        if (serviceProvider.GetService(_validatorType) is not IValidator validator)
+        if (!context.ModelState.IsValid)
         {
-            await next();
-            return;
-        }
+            var modelErrors = context.ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .SelectMany(x => x.Value!.Errors.Select(e => new ApiError(
+                    $"VALIDATION_{x.Key.ToUpper().Replace(".", "_")}_INVALID",
+                    string.IsNullOrEmpty(e.ErrorMessage)
+                        ? $"Invalid value for {x.Key}"
+                        : e.ErrorMessage,
+                    ErrorType.Validation,
+                    x.Key
+                )))
+                .ToList();
 
-        // Find the command/query to validate
-        object? modelToValidate = null;
-        foreach (var argument in context.ActionArguments.Values)
-        {
-            if (argument != null && IsValidatableType(argument.GetType()))
+            context.Result = new BadRequestObjectResult(new ApiResponse<object>
             {
-                modelToValidate = argument;
-                break;
-            }
-        }
-
-        if (modelToValidate == null)
-        {
-            await next();
-            return;
-        }
-
-        // Validate
-        var validationContext = new ValidationContext<object>(modelToValidate);
-        var validationResult = await validator.ValidateAsync(validationContext);
-
-        if (!validationResult.IsValid)
-        {
-            var errors = validationResult.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray()
-                );
-
-            context.Result = new BadRequestObjectResult(new
-            {
-                statusCode = 400,
-                message = "Validation failed",
-                errors
+                Data = null,
+                Error = modelErrors,
+                Meta = new ResponseMeta
+                {
+                    RequestId = context.HttpContext.TraceIdentifier,
+                    Version = context.HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0"
+                }
             });
             return;
         }
 
-        await next();
-    }
+        var validator = context.HttpContext.RequestServices
+            .GetService<IValidator<TModel>>();
 
-    private static bool IsValidatableType(Type type)
-    {
-        return !type.IsPrimitive 
-               && type != typeof(string) 
-               && type != typeof(Guid) 
-               && type != typeof(DateTime);
+        if (validator == null)
+        {
+            await next();
+            return;
+        }
+
+        var model = context.ActionArguments.Values
+            .OfType<TModel>()
+            .FirstOrDefault();
+
+        if (model == null)
+        {
+            await next();
+            return;
+        }
+
+        var validationResult = await validator.ValidateAsync(
+            model,
+            context.HttpContext.RequestAborted
+        );
+
+        if (validationResult.IsValid)
+        {
+            await next();
+            return;
+        }
+
+        var errors = validationResult.Errors
+            .Select(e => new ApiError(
+                $"VALIDATION_{e.PropertyName.ToUpper()}_INVALID",
+                e.ErrorMessage,
+                ErrorType.Validation,
+                e.PropertyName
+            ))
+            .ToList();
+
+        context.Result = new BadRequestObjectResult(new ApiResponse<object>
+        {
+            Data = null,
+            Error = errors,
+            Meta = new ResponseMeta
+            {
+                RequestId = context.HttpContext.TraceIdentifier,
+                Version = context.HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0"
+            }
+        });
     }
 }

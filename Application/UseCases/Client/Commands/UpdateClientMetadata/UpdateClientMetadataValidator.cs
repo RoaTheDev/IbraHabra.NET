@@ -3,7 +3,6 @@ using OpenIddict.Abstractions;
 
 namespace IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientMetadata;
 
-
 public class UpdateClientMetadataValidator : AbstractValidator<UpdateClientMetadataCommand>
 {
     private static readonly string[] ValidApplicationTypes =
@@ -22,6 +21,12 @@ public class UpdateClientMetadataValidator : AbstractValidator<UpdateClientMetad
 
     public UpdateClientMetadataValidator()
     {
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrEmpty(x.DisplayName) ||
+                       !string.IsNullOrEmpty(x.ApplicationType) ||
+                       !string.IsNullOrEmpty(x.ConsentType))
+            .WithMessage("At least one field must be provided for update.");
+
         RuleFor(x => x.ClientId)
             .NotEmpty()
             .WithMessage("Client ID is required.");

@@ -1,4 +1,5 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -13,35 +14,31 @@ public class AssignProjectRoleHandler : IWolverineHandler
     public static async Task<ApiResult> Handle(
         AssignProjectRoleCommand command,
         IRepo<Projects, Guid> projectRepo,
-        IRepo<ProjectRole, Guid> roleRepo,
+        IRepo<ProjectRole, Guid> projectRoleRepo,
         IRepo<ProjectMember, ProjectMemberId> memberRepo,
         UserManager<User> userManager,
         IUnitOfWork unitOfWork)
     {
-        var project = await projectRepo.GetViaIdAsync(command.ProjectId);
-        if (project == null)
-            return ApiResult.Fail(404, "Project not found.");
+        if (await projectRepo.ExistsAsync(p => p.Id == command.ProjectId))
+            return ApiResult.Fail(ApiErrors.Project.NotFound());
 
         var user = await userManager.FindByIdAsync(command.UserId.ToString());
         if (user == null)
-            return ApiResult.Fail(404, "User not found.");
+            return ApiResult.Fail(ApiErrors.User.NotFound());
 
-        var role = await roleRepo.GetViaConditionAsync(
-            r => r.Id == command.RoleId && r.ProjectId == command.ProjectId);
-        if (role == null)
-            return ApiResult.Fail(404, "Project role not found.");
+        if (await projectRoleRepo.ExistsAsync(r =>
+                r.Id == command.RoleId && r.ProjectId == command.ProjectId))
+            return ApiResult.Fail(ApiErrors.ProjectRole.NotFound());
 
         var memberId = new ProjectMemberId(command.ProjectId, command.UserId);
         var existingMember = await memberRepo.GetViaIdAsync(memberId);
-        
+
         if (existingMember != null)
         {
-            // Update the role
             existingMember.ProjectRoleId = command.RoleId;
         }
         else
         {
-            // Add new member
             var member = new ProjectMember
             {
                 ProjectId = command.ProjectId,
@@ -53,6 +50,6 @@ public class AssignProjectRoleHandler : IWolverineHandler
         }
 
         await unitOfWork.SaveChangesAsync();
-        return ApiResult.Ok();
+        return ApiResult.Success();
     }
 }

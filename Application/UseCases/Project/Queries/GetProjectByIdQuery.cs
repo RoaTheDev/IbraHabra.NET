@@ -1,4 +1,5 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Wolverine;
@@ -27,9 +28,9 @@ public class GetProjectByIdHandler : IWolverineHandler
         var project = await repo.GetViaIdAsync(query.ProjectId);
 
         if (project == null)
-            return ApiResult<GetProjectByIdResponse>.Fail(404, "Project not found.");
+            return ApiResult<GetProjectByIdResponse>.Fail(ApiErrors.Project.NotFound());
 
-        return ApiResult<GetProjectByIdResponse>.Ok(new GetProjectByIdResponse(
+        return ApiResult<GetProjectByIdResponse>.Success(new GetProjectByIdResponse(
             project.Id,
             project.DisplayName,
             project.Description,

@@ -1,10 +1,10 @@
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.AssignProjectRole;
-using IbraHabra.NET.Application.UseCases.Admin.Commands.CreateProjectRole;
-using IbraHabra.NET.Application.UseCases.Admin.Commands.DeleteProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RemoveProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.UpdateProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
+using IbraHabra.NET.Application.UseCases.Project.CreateProjectRole;
+using IbraHabra.NET.Application.UseCases.Project.DeleteProjectRole;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;

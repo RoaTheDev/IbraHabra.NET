@@ -1,4 +1,6 @@
-using IbraHabra.NET.Application.Dto.Response;
+using System.Security.Claims;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
@@ -18,33 +20,30 @@ public class ConfirmEnable2FaAdminHandler : IWolverineHandler
         UserManager<User> userManager,
         IHttpContextAccessor httpContextAccessor)
     {
-        var userId = httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value 
-                     ?? httpContextAccessor.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userId = httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value
+                     ?? httpContextAccessor.HttpContext?.User
+                         ?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userId))
-            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(401, "Unauthorized");
+            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(ApiErrors.Authentication.InvalidToken());
 
         var user = await userManager.FindByIdAsync(userId);
         if (user == null)
-            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(404, "User not found");
+            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(ApiErrors.User.NotFound());
 
-        // Strip spaces and hyphens
         var verificationCode = command.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
 
-        // Verify the code
         var is2FaTokenValid = await userManager.VerifyTwoFactorTokenAsync(
             user, userManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
 
         if (!is2FaTokenValid)
         {
-            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(400, 
-                "Verification code is invalid");
+            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(ApiErrors.Authentication.InvalidTwoFactorCode());
         }
 
-        // Enable 2FA
         await userManager.SetTwoFactorEnabledAsync(user, true);
 
-        return ApiResult<ConfirmEnable2FaAdminResponse>.Ok(new ConfirmEnable2FaAdminResponse(
+        return ApiResult<ConfirmEnable2FaAdminResponse>.Success(new ConfirmEnable2FaAdminResponse(
             Success: true,
             Message: "Two-factor authentication has been enabled successfully"));
     }

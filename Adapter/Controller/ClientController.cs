@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices;
+using IbraHabra.NET.Application.Dto.Request.Client;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Client.Commands;
 using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
 using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientAuthPolicy;
+using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientMetadata;
 using IbraHabra.NET.Application.UseCases.Client.Queries;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using Microsoft.AspNetCore.Mvc;
@@ -68,4 +70,18 @@ public class ClientController : ControllerBase
         return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
     }
 
+    [HttpPut("{clientId}/metadata")]
+    public async Task<IActionResult> UpdateClientMetadata([FromRoute] string clientId,
+        [FromBody] UpdateClientMetadataRequest request)
+    {
+        var res = await _messageBus.InvokeAsync<ApiResult<string>>(new UpdateClientMetadataCommand(clientId,
+            request.DisplayName, request.ApplicationType, request.ConsentType));
+        return res.IsSuccess ? Ok(res) : StatusCode(res.StatusCode, res);
+    }
+
+    [HttpPut("{clientId}/permissions")]
+    public async Task<IActionResult> UpdateClientPermission([FromRoute] string clientId,[FromBody] UpdateClientPermission)
+    {
+        
+    }
 }

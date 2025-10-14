@@ -1,6 +1,8 @@
 using System.Text.Json;
 using FluentValidation;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
@@ -35,19 +37,11 @@ public class CreateClientHandler : IWolverineHandler
         IRepo<Projects, Guid> projectRepo,
         IRepo<OauthApplication, string> appRepo,
         IUnitOfWork unitOfWork,
-        IValidator<CreateClientCommand> validator,
         IClientSecretHasher secretHasher)
     {
-        var validationResult = await validator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-        {
-            var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            return ApiResult<CreateClientResponse>.Fail(400, errors);
-        }
-
         var project = await projectRepo.GetViaIdAsync(command.ProjectId);
         if (project == null)
-            return ApiResult<CreateClientResponse>.Fail(404, "Project not found.");
+            return ApiResult<CreateClientResponse>.Fail(ApiErrors.Project.NotFound());
 
         var context = unitOfWork.DbContext;
         var strategy = context.Database.CreateExecutionStrategy();
@@ -117,14 +111,13 @@ public class CreateClientHandler : IWolverineHandler
                 await unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return ApiResult<CreateClientResponse>.Ok(
+                return ApiResult<CreateClientResponse>.Success(
                     new CreateClientResponse(app.Id, app.ClientId, project.Id));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return ApiResult<CreateClientResponse>.Fail(500,
-                    $"Failed to create OAuth client: {ex.Message}");
+                throw;
             }
         });
     }

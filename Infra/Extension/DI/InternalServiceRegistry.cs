@@ -1,6 +1,5 @@
-using FluentValidation;
+using Asp.Versioning;
 using IbraHabra.NET.Application.Services;
-using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Infra.Persistent;
@@ -17,4 +16,19 @@ public static class InternalServiceRegistry
         services.AddScoped<ICurrentUserService, CurrentUserService>()
             .AddScoped<ITwoFactorTokenService, TwoFactorTokenService>()
             .AddScoped<IClientSecretHasher, ClientSecretHasher>();
+    public static void AddApiVersioningConfig(this IServiceCollection services)
+    {
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new ApiVersion(1, 0);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        }).AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
+    }
+
 }

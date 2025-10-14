@@ -38,6 +38,7 @@ using (var scope = app.Services.CreateScope())
     await AppDbContextSeeder.SeedAsync(scope.ServiceProvider);
 }
 
+builder.Services.AddApiVersioningConfig();
 app.UseHttpsRedirection();
 app.UseExceptionHandler();
 app.UseStaticFiles();

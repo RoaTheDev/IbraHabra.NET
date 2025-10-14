@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Client.Commands;
 using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentValidation;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;

@@ -1,6 +1,6 @@
 using System.Text.Json;
-using FluentValidation;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
@@ -19,16 +19,8 @@ public class UpdateClientAuthPolicyHandler : IWolverineHandler
     public static async Task<ApiResult<string>> Handle(
         UpdateClientAuthPolicyCommand command,
         IRepo<OauthApplication, string> appRepo,
-        IValidator<UpdateClientAuthPolicyCommand> validator,
         IUnitOfWork unitOfWork)
     {
-        var validationResult = await validator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-        {
-            var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            return ApiResult<string>.Fail(400, errors);
-        }
-
         var strategy = unitOfWork.DbContext.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
@@ -39,7 +31,7 @@ public class UpdateClientAuthPolicyHandler : IWolverineHandler
             {
                 var client = await appRepo.GetViaConditionAsync(c => c.ClientId == command.ClientId);
                 if (client == null)
-                    return ApiResult<string>.Fail(404, "Client not found.");
+                    return ApiResult<string>.Fail(ApiErrors.OAuthApplication.NotFound());
 
                 var propertiesDict = string.IsNullOrEmpty(client.Properties)
                     ? new Dictionary<string, JsonElement>()
@@ -76,7 +68,7 @@ public class UpdateClientAuthPolicyHandler : IWolverineHandler
 
                 await unitOfWork.CommitTransactionAsync();
 
-                return ApiResult<string>.Ok("Auth policy updated successfully.");
+                return ApiResult<string>.Success("Auth policy updated successfully.");
             }
             catch
             {

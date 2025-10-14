@@ -1,4 +1,6 @@
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Wolverine;
@@ -26,8 +28,8 @@ public class UpdateProjectHandler : IWolverineHandler
                 .SetProperty(p => p.UpdatedAt, DateTime.UtcNow)
         );
         if (result is 0)
-            return ApiResult.Fail(404, "Project not found");
+            return ApiResult.Fail(ApiErrors.Project.NotFound());
 
-        return ApiResult.Ok();
+        return ApiResult.Success();
     }
 }
