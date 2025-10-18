@@ -28,6 +28,6 @@ public class AssignRoleHandler : IWolverineHandler
             return ApiResult.Fail(ApiErrors.Authorization.RoleAlreadyAssigned());
 
         var result = await userManager.AddToRoleAsync(user, command.RoleName);
-        return !result.Succeeded ? ApiResult.Fail(ApiErrors.Common.ServerError()) : ApiResult.Success();
+        return !result.Succeeded ? ApiResult.Fail(ApiErrors.Common.ServerError()) : ApiResult.Ok();
     }
 }

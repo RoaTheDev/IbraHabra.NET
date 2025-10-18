@@ -50,6 +50,6 @@ public class AssignProjectRoleHandler : IWolverineHandler
         }
 
         await unitOfWork.SaveChangesAsync();
-        return ApiResult.Success();
+        return ApiResult.Ok();
     }
 }

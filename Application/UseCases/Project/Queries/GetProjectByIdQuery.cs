@@ -30,7 +30,7 @@ public class GetProjectByIdHandler : IWolverineHandler
         if (project == null)
             return ApiResult<GetProjectByIdResponse>.Fail(ApiErrors.Project.NotFound());
 
-        return ApiResult<GetProjectByIdResponse>.Success(new GetProjectByIdResponse(
+        return ApiResult<GetProjectByIdResponse>.Ok(new GetProjectByIdResponse(
             project.Id,
             project.DisplayName,
             project.Description,

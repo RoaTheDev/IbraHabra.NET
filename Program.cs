@@ -1,5 +1,5 @@
 using dotenv.net;
-using IbraHabra.NET.Infra.Extension;
+using IbraHabra.NET.Infra.Extension.Configs;
 using IbraHabra.NET.Infra.Extension.DI;
 using IbraHabra.NET.Infra.Middleware;
 using IbraHabra.NET.Infra.Persistent;
@@ -11,7 +11,7 @@ builder.Host.AddWolverineConfig();
 
 var config = builder.Configuration;
 var env = builder.Environment;
-
+builder.Services.AddEnvBoundValues(config);
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();
 builder.Services.AddFluentConfig();

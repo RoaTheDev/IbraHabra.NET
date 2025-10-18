@@ -1,10 +1,9 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
-using OpenIddict.Abstractions;
 using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Client.Queries;
@@ -21,7 +20,7 @@ public class GetClientAuthPolicyHandler : IWolverineHandler
             c => new { c.Properties });
 
         if (app == null)
-            return ApiResult<AuthPolicy>.Fail(404, "Client not found.");
+            return ApiResult<AuthPolicy>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var policy = ReadAuthPolicy.GetAuthPolicy(app.Properties);
 

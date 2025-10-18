@@ -30,6 +30,6 @@ public class DeleteProjectRoleHandler : IWolverineHandler
 
         await unitOfWork.SaveChangesAsync();
 
-        return ApiResult.Success();
+        return ApiResult.Ok();
     }
 }

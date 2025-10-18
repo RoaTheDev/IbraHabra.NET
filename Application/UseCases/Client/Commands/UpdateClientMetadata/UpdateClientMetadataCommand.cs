@@ -44,6 +44,6 @@ public class UpdateClientMetadataHandler : IWolverineHandler
             command.ClientId, update);
 
 
-        return ApiResult<string>.Success("Client metadata updated successfully.");
+        return ApiResult<string>.Ok("Client metadata updated successfully.");
     }
 }

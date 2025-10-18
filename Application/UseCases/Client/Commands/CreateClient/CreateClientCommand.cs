@@ -111,7 +111,7 @@ public class CreateClientHandler : IWolverineHandler
                 await unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return ApiResult<CreateClientResponse>.Success(
+                return ApiResult<CreateClientResponse>.Ok(
                     new CreateClientResponse(app.Id, app.ClientId, project.Id));
             }
             catch (Exception)

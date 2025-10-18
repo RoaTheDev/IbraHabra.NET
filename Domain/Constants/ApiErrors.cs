@@ -67,6 +67,31 @@ public static class ApiErrors
             ErrorType.Validation
         );
 
+        public static ApiError InvalidTwoFactorCode() => new(
+            "TWO_FACTOR_DOES_NOT_EXIST",
+            "Two-factor code does not exist or is incorrect.",
+            ErrorType.BusinessRule
+        );
+        public static ApiError CannotDisableTwoFactor() => new(
+            "CANNOT_DISABLE_TWO_FACTOR_DOES_NOT_EXIST",
+            "Two-factor authentication must be enabled first to disable.",
+            ErrorType.BusinessRule
+        );
+        public static ApiError CannotEnableTwoFactor() => new(
+            "TWO_FACTOR_ALREADY_EXIST",
+            "Two-factor authentication already  enabled.",
+            ErrorType.BusinessRule
+        );
+        public static ApiError FailToDisableTwoFactor() => new(
+            "DISABLE_TWO_FACTOR_NOT_WORKING",
+            "Disable two-factor not working. Please ensure there're no business rule violation",
+            ErrorType.BusinessRule
+        );
+        public static ApiError FailAuthKeyGeneration() => new(
+            "FAIL_TO_GENERATE_AUTHENTICATION_KEY",
+            "Authentication Key for 2Fa not working. Please ensure there's no business rule violation",
+            ErrorType.BusinessRule
+        );
         public static ApiError InvalidPasswordResetToken() => new(
             "INVALID_RESET_TOKEN",
             "Password reset token is invalid or has expired. Please request a new password reset.",
@@ -276,7 +301,7 @@ public static class ApiErrors
     {
         public static ApiError NotFound() => new(
             "PROJECT_ROLE_NOT_FOUND",
-            "Project role not found. The role may have been deleted or the ID is incorrect.",
+            "Project role not found. The role may have been deleted.",
             ErrorType.NotFound
         );
 
@@ -345,6 +370,10 @@ public static class ApiErrors
             "OAuth application not found. The application may have been deleted or the ID is incorrect.",
             ErrorType.NotFound
         );
+
+        public static ApiError SecretKeyRuleViolation() => new("CLIENT_TYPE_VIOLATION",
+            "Only confidential clients can have client secrets.",
+            ErrorType.BusinessRule);
 
         public static ApiError InvalidClientId() => new(
             "INVALID_CLIENT_ID",

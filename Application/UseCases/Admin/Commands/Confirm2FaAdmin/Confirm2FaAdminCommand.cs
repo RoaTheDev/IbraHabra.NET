@@ -43,7 +43,7 @@ public class ConfirmEnable2FaAdminHandler : IWolverineHandler
 
         await userManager.SetTwoFactorEnabledAsync(user, true);
 
-        return ApiResult<ConfirmEnable2FaAdminResponse>.Success(new ConfirmEnable2FaAdminResponse(
+        return ApiResult<ConfirmEnable2FaAdminResponse>.Ok(new ConfirmEnable2FaAdminResponse(
             Success: true,
             Message: "Two-factor authentication has been enabled successfully"));
     }

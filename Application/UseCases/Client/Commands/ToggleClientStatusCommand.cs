@@ -1,6 +1,6 @@
 using FluentValidation;
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Wolverine;
@@ -25,7 +25,7 @@ public class ToggleClientStatusHandler : IWolverineHandler
         );
 
         if (rowsAffected == 0)
-            return ApiResult<string>.Fail(404, "client not found");
+            return ApiResult<string>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var status = command.IsActive ? "activated" : "deactivated";
         return ApiResult<string>.Ok($"Client {status} successfully.");

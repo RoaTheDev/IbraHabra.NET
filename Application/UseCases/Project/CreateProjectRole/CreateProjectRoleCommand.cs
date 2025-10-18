@@ -69,7 +69,7 @@ public class CreateProjectRoleHandler : IWolverineHandler
                 await unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
                 var response = new CreateProjectRoleResponse(projectRole.Id, projectRole.ProjectId);
-                return ApiResult<CreateProjectRoleResponse>.Success(response);
+                return ApiResult<CreateProjectRoleResponse>.Ok(response);
             }
             catch (Exception)
             {

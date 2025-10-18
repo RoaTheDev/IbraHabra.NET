@@ -4,6 +4,7 @@ using FluentValidation;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Query;
@@ -23,17 +24,6 @@ public class UpdateClientRedirectUrisHandler : IWolverineHandler
         IRepo<OauthApplication, string> appRepo,
         IValidator<UpdateClientRedirectUrisCommand> validator)
     {
-        var validationResult = await validator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-        {
-            var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            return ApiResult<string>.Fail(400, errors);
-        }
-
-        var client = await appRepo.GetViaConditionAsync(c => c.ClientId == command.ClientId);
-        if (client == null)
-            return ApiResult<string>.Fail(404, "Client not found.");
-
         var jsonedRedirectUris = JsonSerializer.Serialize(command.RedirectUris);
         var jsonedPostLogoutRedirectUris = JsonSerializer.Serialize(command.PostLogoutRedirectUris);
         Expression<Func<SetPropertyCalls<OauthApplication>, SetPropertyCalls<OauthApplication>>> update =
@@ -50,7 +40,7 @@ public class UpdateClientRedirectUrisHandler : IWolverineHandler
             command.ClientId, update);
 
         if (rowsAffected == 0)
-            return ApiResult<string>.Fail(500, "Failed to update redirect URIs.");
+            return ApiResult<string>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         return ApiResult<string>.Ok("Redirect URIs updated successfully.");
     }

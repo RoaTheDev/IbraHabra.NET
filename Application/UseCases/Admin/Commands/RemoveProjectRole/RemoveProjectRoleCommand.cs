@@ -1,5 +1,5 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Wolverine;
@@ -19,7 +19,7 @@ public class RemoveProjectRoleHandler : IWolverineHandler
         var member = await memberRepo.GetViaIdAsync(memberId);
 
         if (member == null)
-            return ApiResult.Fail(404, "User is not a member of this project.");
+            return ApiResult.Fail(ApiErrors.ProjectMember.NotFound());
 
         await memberRepo.DeleteAsync(member.Id);
         await unitOfWork.SaveChangesAsync();

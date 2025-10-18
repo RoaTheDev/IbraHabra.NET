@@ -1,5 +1,5 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -27,33 +27,27 @@ public class UpdateProjectRoleHandler : IWolverineHandler
             query => query.Include(r => r.ProjectRolePermissions));
 
         if (role == null)
-            return ApiResult.Fail(404, "Project role not found.");
+            return ApiResult.Fail(ApiErrors.ProjectRole.NotFound());
 
-        // Update name if provided
         if (!string.IsNullOrWhiteSpace(command.Name) && command.Name != role.Name)
         {
-            // Check if new name already exists
-            var existingRole = await roleRepo.GetViaConditionAsync(
-                r => r.ProjectId == command.ProjectId && r.Name == command.Name && r.Id != command.RoleId);
+            var existingRole = await roleRepo.GetViaConditionAsync(r =>
+                r.ProjectId == command.ProjectId && r.Name == command.Name && r.Id != command.RoleId);
             if (existingRole != null)
-                return ApiResult.Fail(409, $"Role '{command.Name}' already exists in this project.");
+                return ApiResult.Fail(ApiErrors.ProjectRole.DuplicateName());
 
             role.Name = command.Name;
         }
 
-        // Update description if provided
         if (command.Description != null)
         {
             role.Description = command.Description;
         }
 
-        // Update permissions if provided
         if (command.PermissionIds != null)
         {
-            // Remove existing permissions
             role.ProjectRolePermissions.Clear();
 
-            // Add new permissions
             foreach (var permissionId in command.PermissionIds)
             {
                 var permission = await permissionRepo.GetViaIdAsync(permissionId);

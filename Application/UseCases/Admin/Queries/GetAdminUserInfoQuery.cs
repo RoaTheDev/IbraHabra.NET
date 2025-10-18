@@ -1,4 +1,5 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -27,11 +28,11 @@ public class GetAdminUserInfoHandler : IWolverineHandler
     {
         var userId = currentUserService.UserId;
         if (userId == Guid.Empty)
-            return ApiResult<AdminUserInfoResponse>.Fail(401, "Unauthorized.");
+            return ApiResult<AdminUserInfoResponse>.Fail(ApiErrors.Authentication.SessionNotFound());
 
         var user = await userManager.FindByIdAsync(userId.ToString());
         if (user == null)
-            return ApiResult<AdminUserInfoResponse>.Fail(404, "User not found.");
+            return ApiResult<AdminUserInfoResponse>.Fail(ApiErrors.User.NotFound());
 
         var roles = await userManager.GetRolesAsync(user);
 

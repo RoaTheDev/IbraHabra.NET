@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using IbraHabra.NET.Domain.Contract;
@@ -9,44 +8,42 @@ using IbraHabra.NET.Infra.Persistent;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using OpenIddict.Server.AspNetCore;
 
-namespace IbraHabra.NET.Infra.Extension;
+namespace IbraHabra.NET.Infra.Extension.Configs;
 
 public static class AppPolicyExtension
 {
-    public static void AddIdentityConfig(this IServiceCollection services, IConfiguration config)
+    public static void AddIdentityConfig(this IServiceCollection services, IOptions<JwtOptions> jwt,
+        IOptions<IdentitySettingOptions> identitySettings)
     {
+        var settings = identitySettings.Value;
+
         services.AddIdentity<User, Role>(options =>
             {
-                options.Password.RequireDigit = config.GetValue("Identity:Password:RequireDigit", true);
-                options.Password.RequireLowercase = config.GetValue("Identity:Password:RequireLowercase", true);
-                options.Password.RequireNonAlphanumeric =
-                    config.GetValue("Identity:Password:RequireNonAlphanumeric", true);
-                options.Password.RequireUppercase = config.GetValue("Identity:Password:RequireUppercase", true);
-                options.Password.RequiredLength = config.GetValue("Identity:Password:RequiredLength", 8);
-                options.Password.RequiredUniqueChars = config.GetValue("Identity:Password:RequiredUniqueChars", 1);
+                options.Password.RequireDigit = settings.Password.RequireDigit;
+                options.Password.RequireLowercase = settings.Password.RequireLowercase;
+                options.Password.RequireNonAlphanumeric = settings.Password.RequireNonAlphanumeric;
+                options.Password.RequireUppercase = settings.Password.RequireUppercase;
+                options.Password.RequiredLength = settings.Password.RequiredLength;
+                options.Password.RequiredUniqueChars = settings.Password.RequiredUniqueChars;
 
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(settings.Lockout.DefaultLockoutMinutes);
+                options.Lockout.MaxFailedAccessAttempts = settings.Lockout.MaxFailedAccessAttempts;
+                options.Lockout.AllowedForNewUsers = settings.Lockout.AllowedForNewUsers;
 
-                options.SignIn.RequireConfirmedEmail =
-                    config.GetValue("Identity:Login:Require_Email_Confirmation", true);
-                options.SignIn.RequireConfirmedPhoneNumber =
-                    config.GetValue("Identity:Login:Require_PhoneNumber_Confirmation", false);
-                options.SignIn.RequireConfirmedAccount =
-                    config.GetValue("Identity:Login:Require_Account_Confirmation", false);
+                options.SignIn.RequireConfirmedEmail = settings.SignIn.RequireConfirmedEmail;
+                options.SignIn.RequireConfirmedPhoneNumber = settings.SignIn.RequireConfirmedPhoneNumber;
+                options.SignIn.RequireConfirmedAccount = settings.SignIn.RequireConfirmedAccount;
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
 
-        // ADMIN JWT - Keep Symmetric (HMAC-SHA256)
-        var jwtSecret = config["JWT:SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
+        var jwtSecret = jwt.Value.Secret;
         if (!string.IsNullOrEmpty(jwtSecret))
         {
             var key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -58,16 +55,16 @@ public static class AppPolicyExtension
                 })
                 .AddJwtBearer(options =>
                 {
-                    options.RequireHttpsMetadata = config.GetValue("JWT:REQUIRE_HTTPS", true);
+                    options.RequireHttpsMetadata = jwt.Value.RequireHttps;
                     options.SaveToken = true;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuerSigningKey = true,
                         IssuerSigningKey = new SymmetricSecurityKey(key),
                         ValidateIssuer = true,
-                        ValidIssuer = config["JWT:ISSUER"] ?? "IbraHabra",
+                        ValidIssuer = jwt.Value.Issuer,
                         ValidateAudience = true,
-                        ValidAudience = config["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator",
+                        ValidAudience = jwt.Value.Audience,
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.Zero
                     };
@@ -198,7 +195,7 @@ public static class AppPolicyExtension
                                 description: "The token is no longer valid.");
                         }
                     }));
-                
+
                 //  THIS EVENT HANDLER FOR CLIENT AUTHENTICATION
                 opts.AddEventHandler<OpenIddictServerEvents.ValidateTokenRequestContext>(builder =>
                     builder.UseInlineHandler(async context =>

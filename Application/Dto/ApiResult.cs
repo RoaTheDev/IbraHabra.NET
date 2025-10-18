@@ -20,7 +20,7 @@ public class ApiResult<T>
         ApiError = apiError;
     }
 
-    public static ApiResult<T> Success(T value) => new(value);
+    public static ApiResult<T> Ok(T value) => new(value);
     public static ApiResult<T> Fail(ApiError apiError) => new(apiError);
 
     public TResult Match<TResult>(
@@ -42,7 +42,7 @@ public class ApiResult
         Error = error;
     }
 
-    public static ApiResult Success() => new(true);
+    public static ApiResult Ok() => new(true);
     public static ApiResult Fail(ApiError apiError) => new(false, apiError);
 }
 

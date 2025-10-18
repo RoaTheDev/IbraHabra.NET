@@ -1,12 +1,13 @@
 using FluentValidation;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Infra.Docs;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
 
-namespace IbraHabra.NET.Infra.Extension;
+namespace IbraHabra.NET.Infra.Extension.DI;
 
-public static class ExternalExtensions
+public static class ExternalServicesRegistry
 {
     public static void AddDatabaseConfig(this IServiceCollection services, IConfiguration config)
     {
@@ -46,9 +47,7 @@ public static class ExternalExtensions
     public static void AddWolverineConfig(this IHostBuilder hostBuilder) => hostBuilder.UseWolverine(opts =>
     {
         opts.Durability.Mode = DurabilityMode.MediatorOnly;
-        
     });
-
 
     public static void AddScalarConfig(this IServiceCollection services)
     {
@@ -66,4 +65,8 @@ public static class ExternalExtensions
 
     public static void AddFluentConfig(this IServiceCollection services) =>
         services.AddValidatorsFromAssemblyContaining<Program>();
+
+    public static void AddEnvBoundValues(this IServiceCollection services, IConfiguration config) =>
+        services.Configure<JwtOptions>(config.GetSection("JWT"))
+            .Configure<IdentitySettingOptions>(config.GetSection("IDENTITY"));
 }

@@ -68,7 +68,7 @@ public class UpdateClientAuthPolicyHandler : IWolverineHandler
 
                 await unitOfWork.CommitTransactionAsync();
 
-                return ApiResult<string>.Success("Auth policy updated successfully.");
+                return ApiResult<string>.Ok("Auth policy updated successfully.");
             }
             catch
             {

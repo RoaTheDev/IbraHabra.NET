@@ -1,7 +1,10 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
@@ -22,34 +25,35 @@ public class LoginAdminHandler : IWolverineHandler
         LoginAdminCommand command,
         UserManager<User> userManager,
         SignInManager<User> signInManager,
-        IConfiguration configuration)
+        IOptions<JwtOptions> jwtOptions)
     {
         var user = await userManager.FindByEmailAsync(command.Email);
         if (user == null)
-            return ApiResult<LoginAdminCommandResponse>.Fail(401, "Invalid credentials.");
+            return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.User.NotFound());
 
-        // Check if user has admin role
         var roles = await userManager.GetRolesAsync(user);
         Console.WriteLine(string.Join(", ", roles));
         if (!roles.Contains("Admin") && !roles.Contains("Super"))
-            return ApiResult<LoginAdminCommandResponse>.Fail(403, "Access denied. Admin privileges required.");
+            return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
 
         var result = await signInManager.CheckPasswordSignInAsync(user, command.Password, true);
         if (!result.Succeeded)
         {
             if (result.IsLockedOut)
-                return ApiResult<LoginAdminCommandResponse>.Fail(423,
-                    "Account locked due to too many failed attempts.");
+            {
+                var lockoutMinutes = userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes;
+                return ApiResult<LoginAdminCommandResponse>.Fail(
+                    ApiErrors.User.AccountLocked(Convert.ToInt32(lockoutMinutes)));
+            }
 
-            return ApiResult<LoginAdminCommandResponse>.Fail(401, "Invalid credentials.");
+            return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
         }
 
         if (result.RequiresTwoFactor)
         {
-            // For admin, we'll use a simple temporary token approach
             var twoFactorToken = Guid.NewGuid().ToString();
 
-            return ApiResult<LoginAdminCommandResponse>.Ok(202, new LoginAdminCommandResponse(
+            return ApiResult<LoginAdminCommandResponse>.Ok(new LoginAdminCommandResponse(
                 UserId: user.Id,
                 Email: user.Email!,
                 Token: string.Empty,
@@ -58,8 +62,8 @@ public class LoginAdminHandler : IWolverineHandler
                 TwoFactorToken: twoFactorToken));
         }
 
-        var token = await JwtGen.GenerateJwtToken(user, userManager, configuration);
-        var expiresAt = DateTime.UtcNow.AddHours(8); 
+        var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
+        var expiresAt = DateTime.UtcNow.AddHours(8);
 
         return ApiResult<LoginAdminCommandResponse>.Ok(new LoginAdminCommandResponse(
             UserId: user.Id,
@@ -68,4 +72,3 @@ public class LoginAdminHandler : IWolverineHandler
             ExpiresAt: expiresAt));
     }
 }
-

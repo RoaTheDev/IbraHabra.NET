@@ -1,5 +1,5 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using OpenIddict.Abstractions;
@@ -34,7 +34,7 @@ public class GetClientByIdHandler : IWolverineHandler
         var app = await appRepo.GetViaConditionAsync(a => a.ClientId == query.ClientId);
 
         if (app == null)
-            return ApiResult<GetClientResponse>.Fail(404, "Client not found.");
+            return ApiResult<GetClientResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var redirectUris = (await appManager.GetRedirectUrisAsync(app))
             .Select(u => u.ToString()).ToList();

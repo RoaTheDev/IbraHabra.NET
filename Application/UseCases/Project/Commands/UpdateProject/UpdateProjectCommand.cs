@@ -30,6 +30,6 @@ public class UpdateProjectHandler : IWolverineHandler
         if (result is 0)
             return ApiResult.Fail(ApiErrors.Project.NotFound());
 
-        return ApiResult.Success();
+        return ApiResult.Ok();
     }
 }

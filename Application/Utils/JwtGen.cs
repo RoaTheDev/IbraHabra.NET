@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace IbraHabra.NET.Application.Utils;
@@ -10,8 +12,9 @@ namespace IbraHabra.NET.Application.Utils;
 public class JwtGen
 {
     public static async Task<string> GenerateJwtToken(User user, UserManager<User> userManager,
-        IConfiguration configuration)
+        IOptions<JwtOptions> jwtOptions)
     {
+        var jwt = jwtOptions.Value;
         var roles = await userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>
@@ -23,11 +26,9 @@ public class JwtGen
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var jwtSecret = configuration["JWT:SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET")
-            ?? throw new InvalidOperationException("JWT Secret not configured");
-
-        var issuer = configuration["JWT:ISSUER"] ?? "IbraHabra";
-        var audience = configuration["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator";
+        var jwtSecret = jwt.Secret;
+        var issuer = jwt.Issuer;
+        var audience = jwt.Audience;
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

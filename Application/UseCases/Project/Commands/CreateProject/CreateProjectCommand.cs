@@ -36,6 +36,6 @@ public class CreateProjectHandler : IWolverineHandler
         };
         await repo.AddAsync(project);
         await unitOfWork.SaveChangesAsync();
-        return ApiResult<CreateProjectResponse>.Success(new CreateProjectResponse(project.Id));
+        return ApiResult<CreateProjectResponse>.Ok(new CreateProjectResponse(project.Id));
     }
 }

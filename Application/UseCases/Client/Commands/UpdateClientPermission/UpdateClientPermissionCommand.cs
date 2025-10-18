@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Wolverine;
@@ -19,17 +19,6 @@ public class UpdateClientPermissionsHandler : IWolverineHandler
         IRepo<OauthApplication, string> appRepo,
         IValidator<UpdateClientPermissionsCommand> validator)
     {
-        var validationResult = await validator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-        {
-            var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            return ApiResult<string>.Fail(400, errors);
-        }
-
-        var client = await appRepo.GetViaConditionAsync(c => c.ClientId == command.ClientId);
-        if (client == null)
-            return ApiResult<string>.Fail(404, "Client not found.");
-
         var normalizedPermissions = command.Permissions.Distinct().ToList();
         var jsonedPermission = JsonSerializer.Serialize(normalizedPermissions);
 
@@ -40,7 +29,7 @@ public class UpdateClientPermissionsHandler : IWolverineHandler
         );
 
         if (rowsAffected == 0)
-            return ApiResult<string>.Fail(500, "Failed to update permissions.");
+            return ApiResult<string>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         return ApiResult<string>.Ok("Permissions updated successfully.");
     }

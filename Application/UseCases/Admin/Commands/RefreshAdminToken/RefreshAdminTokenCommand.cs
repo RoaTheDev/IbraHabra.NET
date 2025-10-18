@@ -1,10 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Wolverine;
 
@@ -21,13 +24,12 @@ public class RefreshAdminTokenHandler : IWolverineHandler
     public static async Task<ApiResult<RefreshAdminTokenResponse>> Handle(
         RefreshAdminTokenCommand command,
         UserManager<User> userManager,
-        IConfiguration configuration)
+        IOptions<JwtOptions> jwtOptions)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var jwtSecret = configuration["JWT:SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
-        
-        if (string.IsNullOrEmpty(jwtSecret))
-            return ApiResult<RefreshAdminTokenResponse>.Fail(500, "Server configuration error.");
+        var jwt = jwtOptions.Value;
+        var jwtSecret = jwt.Secret;
+
 
         var key = Encoding.UTF8.GetBytes(jwtSecret);
 
@@ -38,31 +40,28 @@ public class RefreshAdminTokenHandler : IWolverineHandler
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateIssuer = true,
-                ValidIssuer = configuration["JWT:ISSUER"] ?? "IbraHabra",
+                ValidIssuer = jwt.Issuer,
                 ValidateAudience = true,
-                ValidAudience = configuration["JWT:AUDIENCE"] ?? "IbraHabra.Domain.Coordinator",
-                ValidateLifetime = false, 
+                ValidAudience = jwt.Audience,
+                ValidateLifetime = false,
                 ClockSkew = TimeSpan.Zero
             };
 
             var principal = tokenHandler.ValidateToken(command.Token, validationParameters, out _);
-            
-            // Extract user ID from token
+
             var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
-                return ApiResult<RefreshAdminTokenResponse>.Fail(401, "Invalid token.");
+                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authentication.InvalidToken());
 
             var user = await userManager.FindByIdAsync(userIdClaim.Value);
             if (user == null)
-                return ApiResult<RefreshAdminTokenResponse>.Fail(404, "User not found.");
+                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.User.NotFound());
 
-            // Verify user still has admin role
             var roles = await userManager.GetRolesAsync(user);
             if (!roles.Contains("Admin") && !roles.Contains("Super"))
-                return ApiResult<RefreshAdminTokenResponse>.Fail(403, "Access denied.");
+                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
 
-            // Generate new token
-            var newToken = await JwtGen.GenerateJwtToken(user, userManager, configuration);
+            var newToken = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
             var expiresAt = DateTime.UtcNow.AddHours(8);
 
             return ApiResult<RefreshAdminTokenResponse>.Ok(new RefreshAdminTokenResponse(
@@ -71,8 +70,7 @@ public class RefreshAdminTokenHandler : IWolverineHandler
         }
         catch (SecurityTokenException)
         {
-            return ApiResult<RefreshAdminTokenResponse>.Fail(401, "Invalid token.");
+            return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authentication.InvalidToken());
         }
     }
-
 }
