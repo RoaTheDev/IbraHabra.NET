@@ -8,7 +8,6 @@ using IbraHabra.NET.Infra.Persistent;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
@@ -18,57 +17,65 @@ namespace IbraHabra.NET.Infra.Extension.Configs;
 
 public static class AppPolicyExtension
 {
-    public static void AddIdentityConfig(this IServiceCollection services, IOptions<JwtOptions> jwt,
-        IOptions<IdentitySettingOptions> identitySettings)
+    public static void AddIdentityConfig(this IServiceCollection services, IConfiguration config)
     {
-        var settings = identitySettings.Value;
+        var jwt = config.GetSection("JWT").Get<JwtOptions>() ?? null;
+        var settings = config.GetSection("IDENTITY").Get<IdentitySettingOptions>() ?? null;
+
 
         services.AddIdentity<User, Role>(options =>
             {
-                options.Password.RequireDigit = settings.Password.RequireDigit;
-                options.Password.RequireLowercase = settings.Password.RequireLowercase;
-                options.Password.RequireNonAlphanumeric = settings.Password.RequireNonAlphanumeric;
-                options.Password.RequireUppercase = settings.Password.RequireUppercase;
-                options.Password.RequiredLength = settings.Password.RequiredLength;
-                options.Password.RequiredUniqueChars = settings.Password.RequiredUniqueChars;
+                if (settings != null)
+                {
+                    options.Password.RequireDigit = settings.Password.RequireDigit;
+                    options.Password.RequireLowercase = settings.Password.RequireLowercase;
+                    options.Password.RequireNonAlphanumeric = settings.Password.RequireNonAlphanumeric;
+                    options.Password.RequireUppercase = settings.Password.RequireUppercase;
+                    options.Password.RequiredLength = settings.Password.RequiredLength;
+                    options.Password.RequiredUniqueChars = settings.Password.RequiredUniqueChars;
 
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(settings.Lockout.DefaultLockoutMinutes);
-                options.Lockout.MaxFailedAccessAttempts = settings.Lockout.MaxFailedAccessAttempts;
-                options.Lockout.AllowedForNewUsers = settings.Lockout.AllowedForNewUsers;
+                    options.Lockout.DefaultLockoutTimeSpan =
+                        TimeSpan.FromMinutes(settings.Lockout.DefaultLockoutMinutes);
+                    options.Lockout.MaxFailedAccessAttempts = settings.Lockout.MaxFailedAccessAttempts;
+                    options.Lockout.AllowedForNewUsers = settings.Lockout.AllowedForNewUsers;
 
-                options.SignIn.RequireConfirmedEmail = settings.SignIn.RequireConfirmedEmail;
-                options.SignIn.RequireConfirmedPhoneNumber = settings.SignIn.RequireConfirmedPhoneNumber;
-                options.SignIn.RequireConfirmedAccount = settings.SignIn.RequireConfirmedAccount;
+                    options.SignIn.RequireConfirmedEmail = settings.SignIn.RequireConfirmedEmail;
+                    options.SignIn.RequireConfirmedPhoneNumber = settings.SignIn.RequireConfirmedPhoneNumber;
+                    options.SignIn.RequireConfirmedAccount = settings.SignIn.RequireConfirmedAccount;
+                }
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
 
-        var jwtSecret = jwt.Value.Secret;
-        if (!string.IsNullOrEmpty(jwtSecret))
+        if (jwt != null)
         {
-            var key = Encoding.UTF8.GetBytes(jwtSecret);
+            var jwtSecret = jwt.Secret;
+            if (!string.IsNullOrEmpty(jwtSecret))
+            {
+                var key = Encoding.UTF8.GetBytes(jwtSecret);
 
-            services.AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.RequireHttpsMetadata = jwt.Value.RequireHttps;
-                    options.SaveToken = true;
-                    options.TokenValidationParameters = new TokenValidationParameters
+                services.AddAuthentication(options =>
                     {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(key),
-                        ValidateIssuer = true,
-                        ValidIssuer = jwt.Value.Issuer,
-                        ValidateAudience = true,
-                        ValidAudience = jwt.Value.Audience,
-                        ValidateLifetime = true,
-                        ClockSkew = TimeSpan.Zero
-                    };
-                });
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    })
+                    .AddJwtBearer(options =>
+                    {
+                        options.RequireHttpsMetadata = jwt.RequireHttps;
+                        options.SaveToken = true;
+                        options.TokenValidationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuerSigningKey = true,
+                            IssuerSigningKey = new SymmetricSecurityKey(key),
+                            ValidateIssuer = true,
+                            ValidIssuer = jwt.Issuer,
+                            ValidateAudience = true,
+                            ValidAudience = jwt.Audience,
+                            ValidateLifetime = true,
+                            ClockSkew = TimeSpan.Zero
+                        };
+                    });
+            }
         }
 
         services.AddAuthorization(options =>
@@ -235,13 +242,11 @@ public static class AppPolicyExtension
                             return;
                         }
 
-                        // ✅ VERIFY THE HASHED SECRET
                         if (!secretHasher.VerifySecret(clientSecret, client.ClientSecret))
                         {
                             context.Reject(
                                 error: OpenIddictConstants.Errors.InvalidClient,
                                 description: "Client authentication failed.");
-                            return;
                         }
                     }));
                 // Custom claims handler

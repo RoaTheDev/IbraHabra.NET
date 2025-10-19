@@ -1,10 +1,11 @@
-using System.Security.Cryptography;
+using System.Linq.Expressions;
 using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Application.Dto.Request.Client;
 using IbraHabra.NET.Application.Dto.Response;
-using IbraHabra.NET.Application.UseCases.Client.Commands;
 using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
 using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientAuthPolicy;
 using IbraHabra.NET.Application.UseCases.Client.Queries;
+using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Domain.Constants.ValueObject;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
@@ -50,7 +51,7 @@ public class AdminApplicationsController : ControllerBase
         if (pageSize <= 0 || pageSize > 200)
             pageSize = 20;
 
-        System.Linq.Expressions.Expression<Func<OauthApplication, bool>> predicate = a => true;
+        Expression<Func<OauthApplication, bool>> predicate = a => true;
         if (projectId.HasValue && projectId.Value != Guid.Empty)
         {
             predicate = a => a.ProjectId == projectId.Value;
@@ -75,12 +76,11 @@ public class AdminApplicationsController : ControllerBase
             ),
             ascending: false);
 
-        var payload = new ListApplicationsResponse(items, nextCursor);
-        var api = ApiResult<ListApplicationsResponse>.Ok(payload);
+        var res = new ListApplicationsResponse(items, nextCursor);
+        var api = ApiResult<ListApplicationsResponse>.Ok(res);
         return Ok(api);
     }
 
-    // Admin: Get application by clientId (reuses existing GetClientByIdQuery)
     [HttpGet("{clientId}")]
     public async Task<IActionResult> GetByClientId([FromRoute] string clientId)
     {
@@ -88,7 +88,6 @@ public class AdminApplicationsController : ControllerBase
         return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
     }
 
-    // Admin: Update application mutable properties
     [HttpPut("{clientId}")]
     public async Task<IActionResult> Update([FromRoute] string clientId, [FromBody] UpdateApplicationRequest request)
     {
@@ -99,7 +98,6 @@ public class AdminApplicationsController : ControllerBase
         var descriptor = new OpenIddictApplicationDescriptor();
         await _appManager.PopulateAsync(descriptor, app);
 
-        // Scalars - null means do not change, empty string is allowed to clear where applicable
         if (request.DisplayName is not null)
             descriptor.DisplayName = request.DisplayName;
         if (request.ApplicationType is not null)
@@ -109,13 +107,12 @@ public class AdminApplicationsController : ControllerBase
         if (request.ConsentType is not null)
             descriptor.ConsentType = request.ConsentType;
 
-        // Collections: null -> no change, empty list -> clear
         if (request.RedirectUris is not null)
         {
             descriptor.RedirectUris.Clear();
             foreach (var uriStr in request.RedirectUris)
             {
-                if (!TryCreateUri(uriStr, out var uri))
+                if (!AuthUtils.TryCreateUri(uriStr, out var uri))
                     return StatusCode(400, ApiResult.Fail(400, $"Invalid redirect URI: {uriStr}"));
                 descriptor.RedirectUris.Add(uri!);
             }
@@ -126,7 +123,7 @@ public class AdminApplicationsController : ControllerBase
             descriptor.PostLogoutRedirectUris.Clear();
             foreach (var uriStr in request.PostLogoutRedirectUris)
             {
-                if (!TryCreateUri(uriStr, out var uri))
+                if (!AuthUtils.TryCreateUri(uriStr, out var uri))
                     return StatusCode(400, ApiResult.Fail(400, $"Invalid post logout redirect URI: {uriStr}"));
                 descriptor.PostLogoutRedirectUris.Add(uri!);
             }
@@ -173,7 +170,7 @@ public class AdminApplicationsController : ControllerBase
         if (app == null)
             return StatusCode(404, ApiResult.Fail(404, "Client not found."));
 
-        var newSecret = GenerateSecureSecret();
+        var newSecret = AuthUtils.GenerateSecureSecret();
 
         var descriptor = new OpenIddictApplicationDescriptor();
         await _appManager.PopulateAsync(descriptor, app);
@@ -214,52 +211,4 @@ public class AdminApplicationsController : ControllerBase
         await _appManager.DeleteAsync(app);
         return Ok(ApiResult.Ok());
     }
-
-    private static bool TryCreateUri(string input, out Uri? uri)
-    {
-        if (Uri.TryCreate(input, UriKind.Absolute, out var created) &&
-            (created.Scheme == Uri.UriSchemeHttp || created.Scheme == Uri.UriSchemeHttps))
-        {
-            uri = created;
-            return true;
-        }
-
-        uri = null;
-        return false;
-    }
-
-    private static string GenerateSecureSecret(int byteLength = 32)
-    {
-        var bytes = new byte[byteLength];
-        RandomNumberGenerator.Fill(bytes);
-        return Convert.ToBase64String(bytes);
-    }
-
-    // DTOs
-    public record UpdateApplicationRequest(
-        string? DisplayName,
-        string? ApplicationType,
-        string? ClientType,
-        string? ConsentType,
-        List<string>? RedirectUris,
-        List<string>? PostLogoutRedirectUris,
-        List<string>? Permissions);
-
-    public record SetStatusRequest(bool IsActive);
-
-    public record RotateSecretResponse(string ClientId, string NewClientSecret);
-
-    public record AdminAppSummary(
-        string Id,
-        string ClientId,
-        Guid ProjectId,
-        string? DisplayName,
-        string? ApplicationType,
-        string? ClientType,
-        string? ConsentType,
-        bool IsActive,
-        DateTime CreatedAt,
-        DateTime? UpdatedAt);
-
-    public record ListApplicationsResponse(IEnumerable<AdminAppSummary> Items, string? NextCursor);
 }
