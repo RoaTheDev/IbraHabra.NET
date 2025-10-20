@@ -1,5 +1,6 @@
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using ImTools;
@@ -17,13 +18,13 @@ public class ConfirmEmailHandler : IWolverineHandler
     {
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive);
         if (client == null)
-            return ApiResult.Fail(400, "Invalid or inactive client.");
+            return ApiResult.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var user = await userManager.FindByEmailAsync(command.Email);
-        if (user is null) return ApiResult.Fail(404, "User does not exist");
+        if (user is null) return ApiResult.Fail(ApiErrors.User.NotFound());
 
         var result = await userManager.ConfirmEmailAsync(user, command.Token);
-        if (!result.Succeeded) return ApiResult.Fail(400, "Invalid token.");
+        if (!result.Succeeded) return ApiResult.Fail(ApiErrors.User.InvalidEmailConfirmationToken());
 
         return ApiResult.Ok();
     }

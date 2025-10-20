@@ -1,6 +1,6 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
@@ -28,24 +28,24 @@ public class Setup2FaComplianceHandler : IWolverineHandler
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive,
             c => new AuthPolicyAndNameProjection(c.Properties,c.DisplayName));
         if (client == null)
-            return ApiResult<Setup2FaComplianceResponse>.Fail(404, "Client does not exist");
+            return ApiResult<Setup2FaComplianceResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
-        var policy = ReadAuthPolicy.GetAuthPolicy(client.Properties);
-        if (!policy.RequireMfa)
-            return ApiResult<Setup2FaComplianceResponse>.Fail(400, "2FA not required for this client.");
+        // var policy = ReadAuthPolicy.GetAuthPolicy(client.Properties);
+        // if (!policy.RequireMfa)
+        //     return ApiResult<Setup2FaComplianceResponse>.Fail(ApiErrors.);
 
         var user = await userManager.FindByEmailAsync(command.Email);
         if (user == null || !await userManager.CheckPasswordAsync(user, command.Password))
-            return ApiResult<Setup2FaComplianceResponse>.Fail(401, "Invalid credentials.");
+            return ApiResult<Setup2FaComplianceResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
 
         if (await userManager.GetTwoFactorEnabledAsync(user))
-            return ApiResult<Setup2FaComplianceResponse>.Fail(400, "2FA is already enabled. Please login normally.");
+            return ApiResult<Setup2FaComplianceResponse>.Fail(ApiErrors.User.CannotEnableTwoFactor());
 
         await userManager.ResetAuthenticatorKeyAsync(user);
         var key = await userManager.GetAuthenticatorKeyAsync(user);
 
         if (string.IsNullOrEmpty(key))
-            return ApiResult<Setup2FaComplianceResponse>.Fail(500, "Failed to generate authenticator key.");
+            return ApiResult<Setup2FaComplianceResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
         
         var complianceToken = await tokenService.CreateTokenAsync(user.Id, command.ClientId);
 

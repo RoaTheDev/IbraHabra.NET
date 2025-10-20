@@ -4,7 +4,6 @@ namespace IbraHabra.NET.Application.Utils;
 
 public static class ApiResponseBuilder
 {
-    // For generic ApiResult<T>
     public static ApiResponse<T> Build<T>(HttpContext httpContext, ApiResult<T> result)
     {
         return new ApiResponse<T>
@@ -15,7 +14,6 @@ public static class ApiResponseBuilder
         };
     }
 
-    // For non-generic ApiResult (e.g., delete operations)
     public static ApiResponse Build(HttpContext httpContext, ApiResult result)
     {
         return new ApiResponse

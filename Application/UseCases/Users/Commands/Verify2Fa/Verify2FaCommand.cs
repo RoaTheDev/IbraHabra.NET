@@ -1,5 +1,5 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
@@ -21,25 +21,25 @@ public class Verify2FaHandler : IWolverineHandler
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive,
             c => new { c.ClientId });
         if (client == null)
-            return ApiResult<Verify2FaResponse>.Fail(400, "Invalid client.");
+            return ApiResult<Verify2FaResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var tokenData = await tokenService.ValidateAndRemoveTokenAsync(command.TwoFactorToken);
         if (tokenData == null)
-            return ApiResult<Verify2FaResponse>.Fail(401, "Invalid or expired token.");
+            return ApiResult<Verify2FaResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
 
         if (tokenData.Value.ClientId != client.ClientId)
-            return ApiResult<Verify2FaResponse>.Fail(401, "Token not valid for this client.");
+            return ApiResult<Verify2FaResponse>.Fail(ApiErrors.OAuthApplication.InvalidClient());
 
         var user = await userManager.FindByIdAsync(tokenData.Value.UserId.ToString());
 
         if (user is null)
-            return ApiResult<Verify2FaResponse>.Fail(401, "User not found.");
+            return ApiResult<Verify2FaResponse>.Fail(ApiErrors.User.NotFound());
 
         var isValidCode = await userManager.VerifyTwoFactorTokenAsync(user,
             userManager.Options.Tokens.AuthenticatorTokenProvider, command.Totp);
 
         if (!isValidCode)
-            return ApiResult<Verify2FaResponse>.Fail(401, "Invalid authenticator code.");
+            return ApiResult<Verify2FaResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
 
         await signInManager.SignInAsync(user, isPersistent: false);
 

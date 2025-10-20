@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -26,21 +26,21 @@ public class Initialize2FaSetupHandler : IWolverineHandler
             c => new { c.DisplayName });
 
         if (client is null)
-            return ApiResult<Setup2FaInfoResponse>.Fail(404, "Client does not exist");
+            return ApiResult<Setup2FaInfoResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var user = await userManager.GetUserAsync(command.Claims);
 
         if (user is null)
-            return ApiResult<Setup2FaInfoResponse>.Fail(401, "Not authenticated.");
+            return ApiResult<Setup2FaInfoResponse>.Fail(ApiErrors.Authentication.InvalidToken());
 
         if (await userManager.GetTwoFactorEnabledAsync(user))
-            return ApiResult<Setup2FaInfoResponse>.Fail(400, "2FA is already enabled. Disable it first to reset.");
+            return ApiResult<Setup2FaInfoResponse>.Fail(ApiErrors.User.CannotEnableTwoFactor());
 
         await userManager.ResetAuthenticatorKeyAsync(user);
         var key = await userManager.GetAuthenticatorKeyAsync(user);
 
         if (string.IsNullOrEmpty(key))
-            return ApiResult<Setup2FaInfoResponse>.Fail(500, "Failed to generate authenticator key.");
+            return ApiResult<Setup2FaInfoResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
 
         var email = user.Email!;
         var qrCodeUri = TwoFactorUtils.GenerateQrCodeUri(email, key, client.DisplayName!);

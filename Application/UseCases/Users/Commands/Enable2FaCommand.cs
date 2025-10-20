@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -19,14 +20,14 @@ public class Enable2FaHandler : IWolverineHandler
         IRepo<OauthApplication, string> repo)
     {
         if (!await repo.ExistsAsync(c => c.ClientId == command.ClientId && c.IsActive))
-            return ApiResult<Enable2FaResponse>.Fail(404, "The client does not exist");
+            return ApiResult<Enable2FaResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var user = await userManager.GetUserAsync(command.Principal);
         if (user == null)
-            return ApiResult<Enable2FaResponse>.Fail(401, "Not authenticated.");
+            return ApiResult<Enable2FaResponse>.Fail(ApiErrors.Authentication.InvalidToken());
 
         if (await userManager.GetTwoFactorEnabledAsync(user))
-            return ApiResult<Enable2FaResponse>.Fail(400, "2FA is already enabled.");
+            return ApiResult<Enable2FaResponse>.Fail(ApiErrors.User.CannotEnableTwoFactor());
 
         var isValidCode = await userManager.VerifyTwoFactorTokenAsync(
             user,
@@ -34,11 +35,11 @@ public class Enable2FaHandler : IWolverineHandler
             command.Code);
 
         if (!isValidCode)
-            return ApiResult<Enable2FaResponse>.Fail(400, "Invalid authenticator code. Please try again.");
+            return ApiResult<Enable2FaResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
 
         var result = await userManager.SetTwoFactorEnabledAsync(user, true);
         if (!result.Succeeded)
-            return ApiResult<Enable2FaResponse>.Fail(500, "Failed to enable 2FA. Please try again.");
+            return ApiResult<Enable2FaResponse>.Fail(ApiErrors.User.FailToEnable2Fa(string.Join(", ", result.Errors)));
 
         var recoveryCodes = await userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
 

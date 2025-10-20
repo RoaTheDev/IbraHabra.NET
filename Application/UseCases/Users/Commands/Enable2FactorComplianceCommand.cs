@@ -1,11 +1,11 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Users.Commands;
-
 
 public record Enable2FaComplianceCommand(string ComplianceToken, string Code, string ClientId);
 
@@ -19,38 +19,32 @@ public class Enable2FComplianceHandler : IWolverineHandler
         SignInManager<User> signInManager,
         ITwoFactorTokenService tokenService)
     {
-        // Validate token (one-time use)
         var tokenData = await tokenService.ValidateAndRemoveTokenAsync(command.ComplianceToken);
         if (tokenData == null)
-            return ApiResult<Enable2FaComplianceResponse>.Fail(401, "Invalid or expired token.");
+            return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.Authentication.InvalidToken());
 
-        // Verify client matches
         if (tokenData.Value.ClientId != command.ClientId)
-            return ApiResult<Enable2FaComplianceResponse>.Fail(401, "Token not valid for this client.");
+            return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.OAuthApplication.InvalidClient());
 
-        // Get user
         var user = await userManager.FindByIdAsync(tokenData.Value.UserId.ToString());
         if (user == null)
-            return ApiResult<Enable2FaComplianceResponse>.Fail(401, "User not found.");
+            return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.User.NotFound());
 
-        // Verify code
         var isValidCode = await userManager.VerifyTwoFactorTokenAsync(
-            user, 
-            userManager.Options.Tokens.AuthenticatorTokenProvider, 
+            user,
+            userManager.Options.Tokens.AuthenticatorTokenProvider,
             command.Code);
 
         if (!isValidCode)
-            return ApiResult<Enable2FaComplianceResponse>.Fail(400, "Invalid authenticator code.");
+            return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.Authentication.InvalidTwoFactorCode());
 
-        // Enable 2FA
         var result = await userManager.SetTwoFactorEnabledAsync(user, true);
         if (!result.Succeeded)
-            return ApiResult<Enable2FaComplianceResponse>.Fail(500, "Failed to enable 2FA.");
+            return ApiResult<Enable2FaComplianceResponse>.Fail(
+                ApiErrors.User.FailToEnable2Fa(string.Join(", ", result.Errors)));
 
-        // Generate recovery codes
         var recoveryCodes = await userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
 
-        // Sign in the user
         await signInManager.SignInAsync(user, isPersistent: false);
 
         return ApiResult<Enable2FaComplianceResponse>.Ok(new(

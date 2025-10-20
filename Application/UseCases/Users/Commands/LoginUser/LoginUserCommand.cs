@@ -1,6 +1,6 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
@@ -30,43 +30,46 @@ public class LoginUserHandler : IWolverineHandler
             new AuthPolicyProjections(c.Properties));
 
         if (client is null)
-            return ApiResult<LoginUserCommandResponse>.Fail(400, "Invalid client.");
+            return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
         var user = await userManager.FindByEmailAsync(command.Email);
         if (user == null)
-            return ApiResult<LoginUserCommandResponse>.Fail(401, "Invalid credentials.");
+            return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
 
         var policy = ReadAuthPolicy.GetAuthPolicy(client.Properties);
 
-        var passwordValidationRes = ReadAuthPolicy.ValidatePasswordAgainstPolicy(command.Password, policy);
-        if (!passwordValidationRes.isPassed)
-            return ApiResult<LoginUserCommandResponse>.Fail(400, passwordValidationRes.errorMsg!);
+        // var passwordValidationRes = ReadAuthPolicy.ValidatePasswordAgainstPolicy(command.Password, policy);
+        // if (!passwordValidationRes.isPassed)
+        //     return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
 
         if (policy.RequireEmailVerification && !user.EmailConfirmed)
-            return ApiResult<LoginUserCommandResponse>.Fail(401, "Email not verified.");
+            return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.User.EmailNotVerified());
 
         var result = await signInManager.CheckPasswordSignInAsync(user, command.Password, true);
         if (!result.Succeeded)
         {
             if (result.IsLockedOut)
-                return ApiResult<LoginUserCommandResponse>.Fail(423, "Account locked due to too many failed attempts.");
+            {
+                var lockoutMinutes = userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes;
+                return ApiResult<LoginUserCommandResponse>.Fail(
+                    ApiErrors.User.AccountLocked(Convert.ToInt32(lockoutMinutes)));
+            }
 
-            return ApiResult<LoginUserCommandResponse>.Fail(401, "Invalid credentials.");
+            return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
         }
 
         if (result.RequiresTwoFactor)
         {
             var twoFactorToken = await tokenService.CreateTokenAsync(user.Id, command.ClientId);
 
-            return ApiResult<LoginUserCommandResponse>.Ok(202, new(
+            return ApiResult<LoginUserCommandResponse>.Ok(new(
                 UserId: null,
                 RequiresTwoFactor: true,
                 TwoFactorToken: twoFactorToken));
         }
 
         if (policy.RequireMfa && !await userManager.GetTwoFactorEnabledAsync(user))
-            return ApiResult<LoginUserCommandResponse>.Fail(401,
-                "This application now requires two-factor authentication. Please set up 2FA to continue.");
+            return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.Authentication.TwoFactorRequired());
 
         await signInManager.SignInAsync(user, isPersistent: false);
 

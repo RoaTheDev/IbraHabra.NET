@@ -1,5 +1,5 @@
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -17,7 +17,7 @@ public class LogoutUserHandler : IWolverineHandler
     {
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive);
         if (client == null)
-            return ApiResult.Fail(400, "Invalid or inactive client.");
+            return ApiResult.Fail(ApiErrors.OAuthApplication.NotFound());
 
         await signInManager.SignOutAsync();
         if (command.RevokeAllTokens && command.UserId.HasValue)

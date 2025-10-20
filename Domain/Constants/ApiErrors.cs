@@ -24,7 +24,24 @@ public static class ApiErrors
             "This username is already taken. Please choose a different username.",
             ErrorType.Conflict
         );
-
+        public static ApiError FailToCreateUser(string msg) => new(
+            "USER_CREATION_FAILED",
+            $"User creation failed due to {msg}",
+            ErrorType.Conflict
+        );
+        
+        public static ApiError FailToDisable2Fa(string msg) => new(
+            "DiSABLE_2FA_FAILED",
+            $"Disable Two Factor failed due to {msg}",
+            ErrorType.Conflict
+        );
+        
+        
+        public static ApiError FailToEnable2Fa(string msg) => new(
+            "ENABLE_2FA_FAILED",
+            $"Enable Two Factor failed due to {msg}",
+            ErrorType.Conflict
+        );
         public static ApiError NotFound() => new(
             "USER_NOT_FOUND",
             "User not found. The user may have been deleted or the ID is incorrect.",
@@ -36,13 +53,18 @@ public static class ApiErrors
             "Please verify your email address before proceeding. Check your inbox for the verification link.",
             ErrorType.Unauthorized
         );
+        public static ApiError EmailAlreadyVerified() => new(
+            "EMAIL_VERIFIED",
+            "Email already verified. You don't need to verify again",
+            ErrorType.BusinessRule
+        );
 
         public static ApiError AccountLocked(int minutes) => new(
             "ACCOUNT_LOCKED",
             $"Your account has been locked due to multiple failed login attempts. Please try again in {minutes} minutes or reset your password.",
             ErrorType.Unauthorized
         );
-
+   
         public static ApiError AccountDisabled() => new(
             "ACCOUNT_DISABLED",
             "Your account has been disabled. Please contact support for assistance.",
@@ -52,6 +74,11 @@ public static class ApiErrors
         public static ApiError CannotDeleteSelf() => new(
             "CANNOT_DELETE_SELF",
             "You cannot delete your own account. Please contact another administrator.",
+            ErrorType.BusinessRule
+        );
+        public static ApiError InvalidEmailConfirmationToken() => new(
+            "EMAIL_CONFIRMATION_TOKEN_INVALID",
+            "The confirmation token is not valid or has expired.",
             ErrorType.BusinessRule
         );
 
@@ -67,31 +94,43 @@ public static class ApiErrors
             ErrorType.Validation
         );
 
+        public static ApiError PasswordRequirementNotMet(string msg) => new(
+            "WEAK_PASSWORD",
+            $"Password does not meet '{msg}'. Please ensure you have it.",
+            ErrorType.Validation
+        );
+        
         public static ApiError InvalidTwoFactorCode() => new(
             "TWO_FACTOR_DOES_NOT_EXIST",
             "Two-factor code does not exist or is incorrect.",
             ErrorType.BusinessRule
         );
+
+        
         public static ApiError CannotDisableTwoFactor() => new(
             "CANNOT_DISABLE_TWO_FACTOR_DOES_NOT_EXIST",
             "Two-factor authentication must be enabled first to disable.",
             ErrorType.BusinessRule
         );
+
         public static ApiError CannotEnableTwoFactor() => new(
             "TWO_FACTOR_ALREADY_EXIST",
             "Two-factor authentication already  enabled.",
             ErrorType.BusinessRule
         );
+
         public static ApiError FailToDisableTwoFactor() => new(
             "DISABLE_TWO_FACTOR_NOT_WORKING",
             "Disable two-factor not working. Please ensure there're no business rule violation",
             ErrorType.BusinessRule
         );
+
         public static ApiError FailAuthKeyGeneration() => new(
             "FAIL_TO_GENERATE_AUTHENTICATION_KEY",
             "Authentication Key for 2Fa not working. Please ensure there's no business rule violation",
             ErrorType.BusinessRule
         );
+
         public static ApiError InvalidPasswordResetToken() => new(
             "INVALID_RESET_TOKEN",
             "Password reset token is invalid or has expired. Please request a new password reset.",
@@ -380,7 +419,11 @@ public static class ApiErrors
             "The provided client ID is invalid.",
             ErrorType.Unauthorized
         );
-
+        public static ApiError InvalidClient() => new(
+            "INVALID_CLIENT",
+            "The provided client has no clue on the end user. please make sure you entered the correct client",
+            ErrorType.Unauthorized
+        );
         public static ApiError InvalidClientSecret() => new(
             "INVALID_CLIENT_SECRET",
             "The provided client secret is invalid.",
