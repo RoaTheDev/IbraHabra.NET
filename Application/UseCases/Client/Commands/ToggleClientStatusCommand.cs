@@ -1,4 +1,3 @@
-using FluentValidation;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
@@ -15,8 +14,7 @@ public class ToggleClientStatusHandler : IWolverineHandler
 {
     public static async Task<ApiResult<string>> Handle(
         ToggleClientStatusCommand command,
-        IRepo<OauthApplication, string> appRepo,
-        IValidator<ToggleClientStatusCommand> validator)
+        IRepo<OauthApplication, string> appRepo)
     {
         var rowsAffected = await appRepo.UpdateAsync(
             command.ClientId, a => a

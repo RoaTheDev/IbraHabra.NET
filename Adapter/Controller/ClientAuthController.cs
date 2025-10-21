@@ -1,11 +1,11 @@
 using System.Security.Claims;
-using FluentValidation;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Request;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Users.Commands;
 using IbraHabra.NET.Application.UseCases.Users.Commands.LoginUser;
 using IbraHabra.NET.Application.UseCases.Users.Commands.RegisterUser;
 using IbraHabra.NET.Application.UseCases.Users.Commands.Verify2Fa;
+using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
@@ -14,52 +14,43 @@ namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ClientAuthController : ControllerBase
+public class ClientAuthController : BaseApiController
 {
     private readonly IMessageBus _bus;
-    private readonly IValidator<LoginUserCommand> _loginValidator;
-    private readonly IValidator<RegisterUserCommand> _registerValidator;
 
-    public ClientAuthController(IMessageBus bus, IValidator<LoginUserCommand> loginValidator,
-        IValidator<RegisterUserCommand> registerValidator)
+    public ClientAuthController(IMessageBus bus)
     {
         _bus = bus;
-        _loginValidator = loginValidator;
-        _registerValidator = registerValidator;
     }
 
     [HttpPost("[action]")]
+    [ValidateModel<RegisterUserCommand>]
     public async Task<IActionResult> Register([FromBody] RegisterUserCommand command)
     {
-        var validationResult = await _registerValidator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-            return BadRequest(validationResult.Errors);
         var res = await _bus.InvokeAsync<ApiResult<RegisterUserCommandResponse>>(command);
-        return res.IsSuccess ? CreatedAtRoute("UserInfoEndpoint", null, res) : StatusCode(res.StatusCode, res.Error);
+        return FromCreatedResult(res, "UserInfoEndpoint", null!);
     }
 
     [HttpPost("[action]")]
+    [ValidateModel<LoginUserCommand>]
     public async Task<IActionResult> Login([FromBody] LoginUserCommand command)
     {
-        var validationResult = await _loginValidator.ValidateAsync(command);
-        if (!validationResult.IsValid)
-            return BadRequest(validationResult.Errors);
         var res = await _bus.InvokeAsync<ApiResult<LoginUserCommandResponse>>(command);
-        return res.IsSuccess ? Ok(res.Value) : StatusCode(res.StatusCode, res.Error);
+        return FromApiResult(res);
     }
 
     [HttpGet]
     public async Task<IActionResult> SendConfirmationEmail([FromBody] SendConfirmationEmailCommand command)
     {
         var res = await _bus.InvokeAsync<ApiResult>(command);
-        return res.IsSuccess ? Ok() : StatusCode(res.StatusCode, res.Error);
+        return FromApiResult(res);
     }
 
     [HttpPost("[action]")]
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailCommand command)
     {
         var res = await _bus.InvokeAsync<ApiResult>(command);
-        return res.IsSuccess ? Ok() : StatusCode(res.StatusCode, res.Error);
+        return FromApiResult(res);
     }
 
     [HttpPost("[action]")]
@@ -70,7 +61,7 @@ public class ClientAuthController : ControllerBase
         var res = await _bus.InvokeAsync<ApiResult>(
             new LogoutUserCommand(Guid.Parse(userId), request.ClientId,
                 request.RevokeAllToken));
-        return res.IsSuccess ? Ok() : StatusCode(res.StatusCode, res.Error);
+        return FromApiResult(res);
     }
 
     /// <summary>
@@ -85,7 +76,7 @@ public class ClientAuthController : ControllerBase
     public async Task<IActionResult> VerifyTwoFactor([FromBody] Verify2FaCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Verify2FaResponse>>(command);
-        return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -101,7 +92,7 @@ public class ClientAuthController : ControllerBase
     {
         var result = await _bus.InvokeAsync<ApiResult<Setup2FaInfoResponse>>(
             new Initialize2FaSetupCommand(HttpContext!.User, clientId));
-        return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -117,7 +108,7 @@ public class ClientAuthController : ControllerBase
     public async Task<IActionResult> Enable([FromBody] Enable2FaCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Enable2FaResponse>>(command);
-        return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -134,7 +125,7 @@ public class ClientAuthController : ControllerBase
         var result =
             await _bus.InvokeAsync<ApiResult>(
                 new Disable2FaCommand(HttpContext!.User, clientId));
-        return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -151,7 +142,7 @@ public class ClientAuthController : ControllerBase
     public async Task<IActionResult> InitializeCompliance([FromBody] Setup2FaComplianceCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Setup2FaComplianceResponse>>(command);
-        return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -167,6 +158,6 @@ public class ClientAuthController : ControllerBase
     public async Task<IActionResult> EnableCompliance([FromBody] Enable2FaComplianceCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Enable2FaComplianceResponse>>(command);
-        return result.IsSuccess ? Ok() : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 }

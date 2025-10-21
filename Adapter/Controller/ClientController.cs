@@ -1,12 +1,13 @@
-using System.Runtime.InteropServices;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Request.Client;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Client.Commands;
 using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
 using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientAuthPolicy;
 using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientMetadata;
 using IbraHabra.NET.Application.UseCases.Client.Queries;
 using IbraHabra.NET.Domain.Constants.ValueObject;
+using Mapster;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
 
@@ -14,7 +15,8 @@ namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 [Route("api/clients")]
-public class ClientController : ControllerBase
+[Authorize(Policy = "AdminPolicy")]
+public class ClientController : BaseApiController
 {
     private readonly IMessageBus _messageBus;
 
@@ -30,9 +32,11 @@ public class ClientController : ControllerBase
     public async Task<IActionResult> CreateClient([FromBody] CreateClientCommand command)
     {
         var result = await _messageBus.InvokeAsync<ApiResult<CreateClientResponse>>(command);
-        return result.IsSuccess
-            ? CreatedAtAction(nameof(GetClient), new { clientId = result.Value!.Id }, result.Value)
-            : StatusCode(result.StatusCode, result.Error);
+        return FromCreatedResult(
+            result,
+            nameof(GetClient),
+            new { clientId = result.Data!.ClientId }
+        );
     }
 
     /// <summary>
@@ -43,7 +47,7 @@ public class ClientController : ControllerBase
     {
         var result = await _messageBus.InvokeAsync<ApiResult<GetClientResponse>>(
             new GetClientByIdQuery(clientId));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -56,7 +60,7 @@ public class ClientController : ControllerBase
     {
         var result = await _messageBus.InvokeAsync<ApiResult<string>>(
             new UpdateClientAuthPolicyCommand(clientId, authPolicy));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -67,7 +71,7 @@ public class ClientController : ControllerBase
     {
         var result = await _messageBus.InvokeAsync<ApiResult<AuthPolicy>>(
             new GetClientAuthPolicyQuery(clientId));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     [HttpPut("{clientId}/metadata")]
@@ -76,12 +80,52 @@ public class ClientController : ControllerBase
     {
         var res = await _messageBus.InvokeAsync<ApiResult<string>>(new UpdateClientMetadataCommand(clientId,
             request.DisplayName, request.ApplicationType, request.ConsentType));
-        return res.IsSuccess ? Ok(res) : StatusCode(res.StatusCode, res);
+        return FromApiResult(res);
     }
 
-    [HttpPut("{clientId}/permissions")]
-    public async Task<IActionResult> UpdateClientPermission([FromRoute] string clientId,[FromBody] UpdateClientPermission)
+    [HttpDelete("{clientId}")]
+    public async Task<IActionResult> Delete([FromRoute] string clientId)
     {
-        
+        var command = new DeleteClientCommand(clientId);
+        var res = await _messageBus.InvokeAsync<ApiResult>(command);
+        return FromApiResult(result: res);
     }
+
+    [HttpPost("{clientId}/rotate-secret")]
+    public async Task<IActionResult> RotateSecret([FromRoute] string clientId)
+    {
+        var command = new RotateSecretCommand(clientId);
+        var res = await _messageBus.InvokeAsync<ApiResult<RotateSecretResponse>>(command);
+        return FromApiResult(result: res);
+    }
+
+    [HttpPatch("{clientId}")]
+    public async Task<IActionResult> Update([FromRoute] string clientId, [FromBody] UpdateApplicationRequest request)
+    {
+        var command = (clientId, request).Adapt<PatchClientCommand>();
+        var res = await _messageBus.InvokeAsync<ApiResult>(command);
+        return FromApiResult(res);
+    }
+
+
+    // [HttpPut("{clientId}/status")]
+    // public async Task<IActionResult> SetStatus([FromRoute] string clientId, [FromBody] SetStatusRequest request)
+    // {        var updated = await _appRepo.UpdateAsync(
+    //         clientId,
+    //         a => a
+    //             .SetProperty(x => x.IsActive, request.IsActive)
+    //             .SetProperty(x => x.UpdatedAt, DateTime.UtcNow));
+    //
+    //     if (updated == 0)
+    //         return StatusCode(ApiErrors.OAuthApplication.NotFound());
+    //
+    //     return Ok(ApiResult.Ok());
+    //
+    // }
+
+    // [HttpPut("{clientId}/permissions")]
+    // public async Task<IActionResult> UpdateClientPermission([FromRoute] string clientId,
+    //     [FromBody] UpdateClientPermission)
+    // {
+    // }
 }

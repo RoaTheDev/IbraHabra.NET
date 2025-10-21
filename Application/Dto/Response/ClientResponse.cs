@@ -1,9 +1,7 @@
 namespace IbraHabra.NET.Application.Dto.Response;
 
-public record RotateSecretResponse(string ClientId, string NewClientSecret);
 
-public record AdminAppSummary(
-    string Id,
+public record ClientSummary(
     string ClientId,
     Guid ProjectId,
     string? DisplayName,
@@ -14,4 +12,4 @@ public record AdminAppSummary(
     DateTime CreatedAt,
     DateTime? UpdatedAt);
 
-public record ListApplicationsResponse(IEnumerable<AdminAppSummary> Items, string? NextCursor);
+public record ListApplicationsResponse(IEnumerable<ClientSummary> Items, string? NextCursor);

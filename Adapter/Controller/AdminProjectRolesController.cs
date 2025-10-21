@@ -1,4 +1,4 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.AssignProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RemoveProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.UpdateProjectRole;
@@ -18,7 +18,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 [ApiController]
 [Route("api/admin/projects/{projectId}/roles")]
 [Authorize(Policy = "AdminOnly")]
-public class AdminProjectRolesController : ControllerBase
+public class AdminProjectRolesController : BaseApiController
 {
     private readonly ICommandBus _bus;
 
@@ -42,9 +42,8 @@ public class AdminProjectRolesController : ControllerBase
             request.PermissionIds);
 
         var result = await _bus.InvokeAsync<ApiResult<CreateProjectRoleResponse>>(command);
-        return result.IsSuccess
-            ? CreatedAtAction(nameof(GetProjectRole), new { projectId, roleId = result.Value!.RoleId }, result)
-            : StatusCode(result.StatusCode, result);
+        return FromCreatedResult(result, nameof(GetProjectRole),
+            new { projectId, roleId = result.Data!.ProjectRoleId });
     }
 
     /// <summary>
@@ -55,7 +54,7 @@ public class AdminProjectRolesController : ControllerBase
     {
         var result = await _bus.InvokeAsync<ApiResult<List<ProjectRoleResponse>>>(
             new GetProjectRolesQuery(projectId));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -66,7 +65,7 @@ public class AdminProjectRolesController : ControllerBase
     {
         var result = await _bus.InvokeAsync<ApiResult<ProjectRoleResponse>>(
             new GetProjectRoleByIdQuery(projectId, roleId));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -86,7 +85,7 @@ public class AdminProjectRolesController : ControllerBase
             request.PermissionIds);
 
         var result = await _bus.InvokeAsync<ApiResult>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -96,7 +95,7 @@ public class AdminProjectRolesController : ControllerBase
     public async Task<IActionResult> DeleteProjectRole([FromRoute] Guid projectId, [FromRoute] Guid roleId)
     {
         var result = await _bus.InvokeAsync<ApiResult>(new DeleteProjectRoleCommand(projectId, roleId));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -110,7 +109,7 @@ public class AdminProjectRolesController : ControllerBase
     {
         var command = new AssignProjectRoleCommand(projectId, request.UserId, roleId);
         var result = await _bus.InvokeAsync<ApiResult>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -124,7 +123,8 @@ public class AdminProjectRolesController : ControllerBase
     {
         var command = new RemoveProjectRoleCommand(projectId, request.UserId);
         var result = await _bus.InvokeAsync<ApiResult>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -135,12 +135,16 @@ public class AdminProjectRolesController : ControllerBase
     {
         var result = await _bus.InvokeAsync<ApiResult<List<ProjectMemberResponse>>>(
             new GetProjectMembersQuery(projectId));
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+
+        return FromApiResult(result);
     }
 
     // DTOs
     public record CreateProjectRoleRequest(string Name, string Description, List<Guid>? PermissionIds);
+
     public record UpdateProjectRoleRequest(string? Name, string? Description, List<Guid>? PermissionIds);
+
     public record AssignProjectRoleRequest(Guid UserId);
+
     public record RemoveProjectRoleRequest(Guid UserId);
 }

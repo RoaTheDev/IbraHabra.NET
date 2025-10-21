@@ -6,7 +6,7 @@ public class ApiResult<T>
 {
     public bool IsSuccess { get; }
     public T? Data { get; }
-    public ApiError? ApiError { get; }
+    public ApiError? Error { get; }
 
     private ApiResult(T data)
     {
@@ -14,10 +14,10 @@ public class ApiResult<T>
         Data = data;
     }
 
-    private ApiResult(ApiError apiError)
+    private ApiResult(ApiError error)
     {
         IsSuccess = false;
-        ApiError = apiError;
+        Error = error;
     }
 
     public static ApiResult<T> Ok(T value) => new(value);
@@ -27,7 +27,7 @@ public class ApiResult<T>
         Func<T, TResult> onSuccess,
         Func<ApiError, TResult> onFailure)
     {
-        return IsSuccess ? onSuccess(Data!) : onFailure(ApiError!);
+        return IsSuccess ? onSuccess(Data!) : onFailure(Error!);
     }
 }
 

@@ -9,16 +9,16 @@ public static class ApiResponseBuilder
         return new ApiResponse<T>
         {
             Data = result.Data,
-            Error = result.ApiError != null ? [result.ApiError] : null,
+            Error = result.Error != null ? [result.Error] : null,
             Meta = CreateMeta(httpContext)
         };
     }
 
-    public static ApiResponse Build(HttpContext httpContext, ApiResult result)
+    public static ApiResponse Build(HttpContext httpContext, ApiResult result )
     {
         return new ApiResponse
         {
-            Data = null,
+            Data = "Request run successfully.",
             Error = result.Error != null ? [result.Error] : null,
             Meta = CreateMeta(httpContext)
         };

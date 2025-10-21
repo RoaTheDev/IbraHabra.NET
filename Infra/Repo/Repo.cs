@@ -3,7 +3,6 @@ using FastExpressionCompiler;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Query;
 
 namespace IbraHabra.NET.Infra.Repo;

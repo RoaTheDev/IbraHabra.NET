@@ -1,9 +1,10 @@
-using System.Net;
-using System.Runtime.InteropServices;
+using System.Linq.Expressions;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Application.UseCases.Project.Commands.CreateProject;
-using IbraHabra.NET.Application.UseCases.Project.Commands.UpdateProject;
 using IbraHabra.NET.Application.UseCases.Project.Queries;
+using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Entities;
 using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
@@ -12,32 +13,25 @@ namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 [Route("api/projects")]
-public class ProjectController : ControllerBase
+public class ProjectController(IMessageBus messageBus) : BaseApiController
 {
-    private readonly IMessageBus _messageBus;
-
-    public ProjectController(IMessageBus messageBus)
-    {
-        _messageBus = messageBus;
-    }
-
-    [ValidateModel(typeof(CreateProjectCommand))]
+    [ValidateModel<CreateProjectCommand>]
     [HttpPost]
     public async Task<IActionResult> CreateProject(CreateProjectCommand command)
     {
-        var res = await _messageBus.InvokeAsync<ApiResult<CreateProjectResponse>>(command);
-        return res.IsSuccess
-            ? CreatedAtAction(nameof(GetProjectById), new { projectId = res.Value!.Id }, res.Value)
-            : StatusCode(res.StatusCode, res.Error);
+        var result = await messageBus.InvokeAsync<ApiResult<CreateProjectResponse>>(command);
+        return FromApiResult(result);
     }
 
 
     [HttpGet("{projectId}")]
     public async Task<IActionResult> GetProjectById([FromRoute] Guid projectId)
     {
-        var res = await _messageBus.InvokeAsync<ApiResult<GetProjectByIdResponse>>(new GetProjectByIdQuery(projectId));
-        return res.IsSuccess ? Ok(res.Value) : StatusCode(res.StatusCode, res.Error);
+        var result =
+            await messageBus.InvokeAsync<ApiResult<GetProjectByIdResponse>>(new GetProjectByIdQuery(projectId));
+        return FromApiResult(result);
     }
+
     //
     // [HttpPut]
     // public async Task<IActionResult> UpdateProject([FromBody] UpdateProjectCommand command)

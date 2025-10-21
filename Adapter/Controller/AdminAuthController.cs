@@ -1,4 +1,4 @@
-using IbraHabra.NET.Application.Dto.Response;
+using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Confirm2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Disable2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Enable2FaAdmin;
@@ -15,7 +15,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 [Route("api/admin/auth")]
-public class AdminAuthController : ControllerBase
+public class AdminAuthController : BaseApiController
 {
     private readonly IMessageBus _bus;
 
@@ -29,11 +29,11 @@ public class AdminAuthController : ControllerBase
     /// If 2FA is enabled, returns RequiresTwoFactor=true
     /// </summary>
     [HttpPost("login")]
-    [ValidateModel(typeof(LoginAdminCommand))]
+    [ValidateModel<LoginAdminCommand>]
     public async Task<IActionResult> Login([FromBody] LoginAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<LoginAdminCommandResponse>>(command);
-        return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, result.Error);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -44,8 +44,8 @@ public class AdminAuthController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Enable2Fa()
     {
-        var result = await _bus.InvokeAsync<ApiResult<Enable2FaAdminResponse>>(new Enable2FaAdminCommand());
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        var result = await _bus.InvokeAsync<ApiResult<Enable2FaAdminResponse>>(new Enable2FaAdminCommand(HttpContext));
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class AdminAuthController : ControllerBase
     public async Task<IActionResult> ConfirmEnable2Fa([FromBody] ConfirmEnable2FaAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<ConfirmEnable2FaAdminResponse>>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public class AdminAuthController : ControllerBase
     public async Task<IActionResult> Disable2Fa([FromBody] Disable2FaAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Disable2FaAdminResponse>>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class AdminAuthController : ControllerBase
     public async Task<IActionResult> Verify2Fa([FromBody] Verify2FaAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Verify2FaAdminCommandResponse>>(command);
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public class AdminAuthController : ControllerBase
         var result = await _bus.InvokeAsync<ApiResult<RefreshAdminTokenResponse>>(
             new RefreshAdminTokenCommand(token));
 
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public class AdminAuthController : ControllerBase
     public async Task<IActionResult> GetCurrentAdmin()
     {
         var result = await _bus.InvokeAsync<ApiResult<AdminUserInfoResponse>>(new GetAdminUserInfoQuery());
-        return result.IsSuccess ? Ok(result) : StatusCode(result.StatusCode, result);
+        return FromApiResult(result);
     }
 
     /// <summary>

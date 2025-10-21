@@ -26,7 +26,6 @@ public record CreateClientCommand(
     AuthPolicy? AuthPolicy = null);
 
 public record CreateClientResponse(
-    string Id,
     string ClientId,
     Guid ProjectId);
 
@@ -112,7 +111,7 @@ public class CreateClientHandler : IWolverineHandler
                 await transaction.CommitAsync();
 
                 return ApiResult<CreateClientResponse>.Ok(
-                    new CreateClientResponse(app.Id, app.ClientId, project.Id));
+                    new CreateClientResponse( app.ClientId, project.Id));
             }
             catch (Exception)
             {
