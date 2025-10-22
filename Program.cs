@@ -12,6 +12,7 @@ builder.Host.AddWolverineConfig();
 var config = builder.Configuration;
 var env = builder.Environment;
 builder.Services.AddEnvBoundValues(config);
+builder.Services.AddApiVersioningConfig();
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();
 builder.Services.AddFluentConfig();
@@ -24,9 +25,10 @@ builder.Services.RegisterServices();
 builder.Services.AddIdentityConfig(config);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
+
+
+
 var app = builder.Build();
-
-
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -38,7 +40,6 @@ using (var scope = app.Services.CreateScope())
     await AppDbContextSeeder.SeedAsync(scope.ServiceProvider);
 }
 
-builder.Services.AddApiVersioningConfig();
 app.UseHttpsRedirection();
 app.UseExceptionHandler();
 app.UseStaticFiles();

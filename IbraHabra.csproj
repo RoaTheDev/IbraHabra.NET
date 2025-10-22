@@ -47,6 +47,7 @@
       <Folder Include="Application\UseCases\Admin\" />
       <Folder Include="Application\UseCases\Project\Commands\" />
       <Folder Include="Application\UseCases\Users\Queries\" />
+      <Folder Include="Ui\" />
     </ItemGroup>
 
 </Project>

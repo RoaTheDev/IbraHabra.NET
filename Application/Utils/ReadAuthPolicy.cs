@@ -1,5 +1,5 @@
 using System.Text.Json;
-using IbraHabra.NET.Domain.Constants.ValueObject;
+using IbraHabra.NET.Domain.Constants.Values;
 
 namespace IbraHabra.NET.Application.Utils;
 

@@ -1,5 +1,6 @@
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Confirm2FaAdmin;
+using IbraHabra.NET.Application.UseCases.Admin.Commands.CreateUser;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Disable2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Enable2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
@@ -33,6 +34,14 @@ public class AdminAuthController : BaseApiController
     public async Task<IActionResult> Login([FromBody] LoginAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<LoginAdminCommandResponse>>(command);
+        return FromApiResult(result);
+    }
+
+    [HttpPost("register")]
+    [ValidateModel<CreateUserCommand>]
+    public async Task<IActionResult> Register([FromBody] CreateUserCommand command)
+    {
+        var result = await _bus.InvokeAsync<ApiResult>(command);
         return FromApiResult(result);
     }
 

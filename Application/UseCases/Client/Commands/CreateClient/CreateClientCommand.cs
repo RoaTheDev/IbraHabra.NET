@@ -3,7 +3,7 @@ using FluentValidation;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Domain.Constants;
-using IbraHabra.NET.Domain.Constants.ValueObject;
+using IbraHabra.NET.Domain.Constants.Values;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;

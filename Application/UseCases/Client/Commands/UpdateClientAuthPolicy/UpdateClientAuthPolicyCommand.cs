@@ -1,7 +1,7 @@
 using System.Text.Json;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Domain.Constants;
-using IbraHabra.NET.Domain.Constants.ValueObject;
+using IbraHabra.NET.Domain.Constants.Values;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.EntityFrameworkCore;

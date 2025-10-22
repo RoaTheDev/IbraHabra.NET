@@ -1,4 +1,5 @@
 using FluentValidation;
+using IbraHabra.NET.Domain.Constants.Values;
 using OpenIddict.Abstractions;
 
 namespace IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
@@ -258,7 +259,7 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
         return true;
     }
 
-    private static bool ValidatePkceForPublicClients(CreateClientCommand command, Domain.Constants.ValueObject.AuthPolicy? policy)
+    private static bool ValidatePkceForPublicClients(CreateClientCommand command, AuthPolicy? policy)
     {
         // Public clients should ideally require PKCE
         if (command.ClientType == OpenIddictConstants.ClientTypes.Public)

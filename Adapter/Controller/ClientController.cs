@@ -5,7 +5,7 @@ using IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
 using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientAuthPolicy;
 using IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientMetadata;
 using IbraHabra.NET.Application.UseCases.Client.Queries;
-using IbraHabra.NET.Domain.Constants.ValueObject;
+using IbraHabra.NET.Domain.Constants.Values;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

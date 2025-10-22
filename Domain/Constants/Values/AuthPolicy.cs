@@ -1,4 +1,4 @@
-namespace IbraHabra.NET.Domain.Constants.ValueObject;
+namespace IbraHabra.NET.Domain.Constants.Values;
 
 public class AuthPolicy
 {
