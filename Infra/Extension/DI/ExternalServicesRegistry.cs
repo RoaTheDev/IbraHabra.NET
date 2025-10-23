@@ -1,5 +1,7 @@
 using FluentValidation;
+using IbraHabra.NET.Application.Services;
 using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Infra.Docs;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
@@ -69,4 +71,25 @@ public static class ExternalServicesRegistry
     public static void AddEnvBoundValues(this IServiceCollection services, IConfiguration config) =>
         services.Configure<JwtOptions>(config.GetSection("JWT"))
             .Configure<IdentitySettingOptions>(config.GetSection("IDENTITY"));
+
+    public static void AddCachingConfig(this IServiceCollection services, IConfiguration config)
+    {
+        var redisKey = config.GetSection("REDIS");
+        services.Configure<RedisOptions>(redisKey);
+        var redisOptions = redisKey.Get<RedisOptions>();
+        if (redisOptions is { UseRedis: true })
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisOptions.RedisConnectionString;
+                options.InstanceName = "IbraHabra:";
+            });
+        }
+        else
+        {
+            services.AddMemoryCache();
+        }
+
+        services.AddScoped<ICacheService, CacheService>();
+    }
 }

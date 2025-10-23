@@ -29,6 +29,7 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.10" />
         <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.9" />
         <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.9" />
         <PackageReference Include="Npgsql" Version="9.0.3" />
@@ -48,6 +49,8 @@
       <Folder Include="Application\UseCases\Project\Commands\" />
       <Folder Include="Application\UseCases\Users\Queries\" />
       <Folder Include="Ui\" />
+      <Folder Include="Ui\src\queries\" />
+      <Folder Include="Ui\src\stores\actions\" />
     </ItemGroup>
 
 </Project>

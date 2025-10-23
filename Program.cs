@@ -12,6 +12,7 @@ builder.Host.AddWolverineConfig();
 var config = builder.Configuration;
 var env = builder.Environment;
 builder.Services.AddEnvBoundValues(config);
+builder.Services.AddCachingConfig(config);
 builder.Services.AddApiVersioningConfig();
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();
@@ -25,7 +26,6 @@ builder.Services.RegisterServices();
 builder.Services.AddIdentityConfig(config);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
-
 
 
 var app = builder.Build();
