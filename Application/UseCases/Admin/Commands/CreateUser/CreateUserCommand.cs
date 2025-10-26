@@ -9,9 +9,10 @@ namespace IbraHabra.NET.Application.UseCases.Admin.Commands.CreateUser;
 public record CreateUserCommand(
     string Email,
     string Password,
+    string[] Roles,
     string? FirstName = null,
-    string? LastName = null,
-    string[]? Roles = null);
+    string? LastName = null
+);
 
 public class CreateUserHandler : IWolverineHandler
 {

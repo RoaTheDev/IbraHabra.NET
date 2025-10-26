@@ -31,26 +31,21 @@ public class Enable2FaAdminHandler : IWolverineHandler
         if (user == null)
             return ApiResult<Enable2FaAdminResponse>.Fail(ApiErrors.User.NotFound());
 
-        // Check if 2FA is already enabled
         var isTwoFactorEnabled = await userManager.GetTwoFactorEnabledAsync(user);
         if (isTwoFactorEnabled)
             return ApiResult<Enable2FaAdminResponse>.Fail(ApiErrors.User.CannotEnableTwoFactor());
 
-        // Reset the authenticator key
         await userManager.ResetAuthenticatorKeyAsync(user);
         var unformattedKey = await userManager.GetAuthenticatorKeyAsync(user);
 
         if (string.IsNullOrEmpty(unformattedKey))
             return ApiResult<Enable2FaAdminResponse>.Fail(ApiErrors.User.FailAuthKeyGeneration());
 
-        // Format the key for display (groups of 4)
         var sharedKey = FormatKey(unformattedKey);
 
-        // Generate QR code URI for authenticator apps
         var email = await userManager.GetEmailAsync(user);
         var authenticatorUri = GenerateQrCodeUri(email!, unformattedKey);
 
-        // Generate recovery codes
         var recoveryCodes = await userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
 
         return ApiResult<Enable2FaAdminResponse>.Ok(new Enable2FaAdminResponse(

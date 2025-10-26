@@ -7,6 +7,8 @@ using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Admin.Commands.Disable2FaAdmin;
 
+public record Disable2FaAdminRequest(string Password);
+
 public record Disable2FaAdminCommand(string Password, HttpContext HttpContext);
 
 public record Disable2FaAdminResponse(

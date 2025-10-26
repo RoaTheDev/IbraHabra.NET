@@ -49,6 +49,7 @@
       <Folder Include="Application\UseCases\Project\Commands\" />
       <Folder Include="Application\UseCases\Users\Queries\" />
       <Folder Include="Ui\" />
+      <Folder Include="Ui\src\features\adminAuth\components\" />
       <Folder Include="Ui\src\queries\" />
       <Folder Include="Ui\src\stores\actions\" />
     </ItemGroup>

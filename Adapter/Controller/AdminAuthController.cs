@@ -7,6 +7,7 @@ using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RefreshAdminToken;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Verify2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
+using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -73,8 +74,9 @@ public class AdminAuthController : BaseApiController
     /// </summary>
     [HttpPost("2fa/disable")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> Disable2Fa([FromBody] Disable2FaAdminCommand command)
+    public async Task<IActionResult> Disable2Fa([FromBody] Disable2FaAdminRequest request)
     {
+        var command = new Disable2FaAdminCommand(request.Password, HttpContext);
         var result = await _bus.InvokeAsync<ApiResult<Disable2FaAdminResponse>>(command);
         return FromApiResult(result);
     }
@@ -138,6 +140,6 @@ public class AdminAuthController : BaseApiController
     [Authorize(Policy = "AdminOnly")]
     public IActionResult Logout()
     {
-        return Ok(ApiResult.Ok());
+        return Ok(ApiResponseBuilder.Build(HttpContext, ApiResult.Ok()));
     }
 }
