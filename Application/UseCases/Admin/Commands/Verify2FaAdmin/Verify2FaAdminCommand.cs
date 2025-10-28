@@ -2,6 +2,7 @@ using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -9,7 +10,7 @@ using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Admin.Commands.Verify2FaAdmin;
 
-public record Verify2FaAdminCommand(string Email, string Code);
+public record Verify2FaAdminCommand(string Session2Fa, string Code);
 
 public record Verify2FaAdminCommandResponse(
     Guid UserId,
@@ -22,9 +23,16 @@ public class Verify2FaAdminHandler : IWolverineHandler
     public static async Task<ApiResult<Verify2FaAdminCommandResponse>> Handle(
         Verify2FaAdminCommand command,
         UserManager<User> userManager,
-        SignInManager<User> signInManager, IOptions<JwtOptions> jwtOptions)
+        SignInManager<User> signInManager,
+        ICacheService cache,
+        IOptions<JwtOptions> jwtOptions)
     {
-        var user = await userManager.FindByEmailAsync(command.Email);
+        var cachedEmail = await cache.GetAsync<string>($"2fa:{command.Session2Fa}");
+        await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+        if (cachedEmail == null)
+            return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.Authentication.InvalidSession());
+
+        var user = await userManager.FindByEmailAsync(cachedEmail);
         if (user == null)
             return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.User.NotFound());
 

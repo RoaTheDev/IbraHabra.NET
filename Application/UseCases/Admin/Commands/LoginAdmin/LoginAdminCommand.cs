@@ -2,6 +2,7 @@ using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Contract;
+using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -17,7 +18,7 @@ public record LoginAdminCommandResponse(
     string Token,
     DateTime ExpiresAt,
     bool RequiresTwoFactor = false,
-    string? TwoFactorToken = null);
+    string? Session2Fa = null);
 
 public class LoginAdminHandler : IWolverineHandler
 {
@@ -25,6 +26,7 @@ public class LoginAdminHandler : IWolverineHandler
         LoginAdminCommand command,
         UserManager<User> userManager,
         SignInManager<User> signInManager,
+        ICacheService cache,
         IOptions<JwtOptions> jwtOptions)
     {
         var user = await userManager.FindByEmailAsync(command.Email);
@@ -51,15 +53,16 @@ public class LoginAdminHandler : IWolverineHandler
 
         if (result.RequiresTwoFactor)
         {
-            var twoFactorToken = Guid.NewGuid().ToString();
+            var session2Fa = Guid.NewGuid().ToString();
+            await cache.SetAsync($"2fa:{session2Fa}", user.Email, TimeSpan.FromMinutes(5));
 
             return ApiResult<LoginAdminCommandResponse>.Ok(new LoginAdminCommandResponse(
-                UserId: user.Id,
-                Email: user.Email!,
+                UserId: Guid.Empty,
+                Email: "default@ibrahara.com",
                 Token: string.Empty,
                 ExpiresAt: DateTime.UtcNow,
                 RequiresTwoFactor: true,
-                TwoFactorToken: twoFactorToken));
+                Session2Fa: session2Fa));
         }
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);

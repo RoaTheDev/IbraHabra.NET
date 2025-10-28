@@ -145,7 +145,11 @@ public static class ApiErrors
             "Invalid email or password. Please check your credentials and try again.",
             ErrorType.Unauthorized
         );
-
+        public static ApiError InvalidSession() => new(
+            "INVALID_SESSION",
+            "Session key not found. Please check your credentials and try again.",
+            ErrorType.Unauthorized
+        );
         public static ApiError InvalidToken() => new(
             "INVALID_TOKEN",
             "The provided token is invalid or has expired. Please sign in again.",

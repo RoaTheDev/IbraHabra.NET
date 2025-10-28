@@ -1,3 +1,4 @@
+using System.Text.Json;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using Microsoft.Extensions.Caching.Distributed;
@@ -23,20 +24,22 @@ public class CacheService : ICacheService
         _useRedis = options.Value.UseRedis && redisCache != null;
     }
 
-    public async Task SetAsync(string key, string value, bool sliding = false, TimeSpan? expiration = null)
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, bool sliding = false)
     {
-        var cacheOptions = new DistributedCacheEntryOptions();
-        if (expiration.HasValue)
-        {
-            if (sliding)
-                cacheOptions.SlidingExpiration = expiration;
-            else
-                cacheOptions.AbsoluteExpirationRelativeToNow = expiration;
-        }
+        var json = JsonSerializer.Serialize(value);
 
         if (_useRedis)
         {
-            await _redisCache!.SetStringAsync(key, value, cacheOptions);
+            var cacheOptions = new DistributedCacheEntryOptions();
+            if (expiration.HasValue)
+            {
+                if (sliding)
+                    cacheOptions.SlidingExpiration = expiration;
+                else
+                    cacheOptions.AbsoluteExpirationRelativeToNow = expiration;
+            }
+
+            await _redisCache!.SetStringAsync(key, json, cacheOptions);
         }
         else
         {
@@ -49,19 +52,23 @@ public class CacheService : ICacheService
                     memoryOptions.AbsoluteExpirationRelativeToNow = expiration;
             }
 
-            _memoryCache.Set(key, value, memoryOptions);
+            _memoryCache.Set(key, json, memoryOptions);
         }
     }
 
-    public async Task<string?> GetAsync(string key)
+    public async Task<T?> GetAsync<T>(string key)
     {
+        string? json = null;
         if (_useRedis)
         {
-            var value = await _redisCache!.GetStringAsync(key);
-            if (!string.IsNullOrEmpty(value)) return value;
+            json = await _redisCache!.GetStringAsync(key);
+        }
+        else if (_memoryCache.TryGetValue(key, out string? memValue))
+        {
+            json = memValue;
         }
 
-        return _memoryCache.TryGetValue(key, out string? memValue) ? memValue : null;
+        return string.IsNullOrEmpty(json) ? default : JsonSerializer.Deserialize<T>(json);
     }
 
     public async Task RemoveAsync(string key)

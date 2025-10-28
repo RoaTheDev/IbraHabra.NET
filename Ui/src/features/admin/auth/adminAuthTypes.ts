@@ -23,7 +23,7 @@ export type LoginResponse = {
   token: string
   expiresAt: string
   requiresTwoFactor: boolean
-  twoFactorToken?: string | null
+  session2Fa: string | null
 }
 
 export type RefreshTokenRequest = {
@@ -35,13 +35,13 @@ export type RefreshTokenResponse = {
 }
 
 export type Verify2FaAdminRequest = {
-  email: string
+  twoFactorCode: string
   code: string
 }
 export type Verify2FaAdminResponse = {
   userId: string
   email: string
-  code: string
+  token: string
   expiresAt: string
 }
 export type Enable2FaAdminResponse = {
