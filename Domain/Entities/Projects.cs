@@ -2,7 +2,7 @@ using IbraHabra.NET.Domain.Contract;
 
 namespace IbraHabra.NET.Domain.Entities;
 
-public class Projects: IEntity<Guid>
+public class Projects : IEntity<Guid>
 {
     public Guid Id { get; set; }
     public string DisplayName { get; set; } = null!;
@@ -10,6 +10,7 @@ public class Projects: IEntity<Guid>
     public string? LogoUrl { get; set; }
     public string? HomePageUrl { get; set; }
 
+    public string? AllowedCorsOrigins { get; set; }
     public bool AllowRegistration { get; set; } = true;
     public bool AllowSocialLogin { get; set; } = true;
     public bool IsActive { get; set; } = true;

@@ -20,7 +20,7 @@ import { CreateUserRequest } from '@/features/admin/manageUser/adminManageType.t
 const baseUrl = '/auth'
 
 const endpoint = {
-  login: `${baseUrl}/login}`,
+  login: `${baseUrl}/login`,
   createUser: `${baseUrl}/register`,
   me: `${baseUrl}/me`,
   enable2fa: `${baseUrl}/2fa/enable`,

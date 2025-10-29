@@ -32,7 +32,7 @@ function Login() {
     onSubmit: async ({ value }) => {
       login(value, {
         onSuccess: (response) => {
-          const requireTwoFactor = response.data.requireTwoFactor
+          const requireTwoFactor = response.data.requiresTwoFactor
           requireTwoFactor
             ? navigate({ to: '/auth/2fa' })
             : navigate({ to: '/' })

@@ -43,7 +43,9 @@ export const adminAuthStoreAction = {
   set2FaSessionCode: (session: string | null) =>
     adminAuthStore.setState((prev) => ({ ...prev, sessionCode2Fa: session })),
   rehydrate: () => {
-    const saved = localStorageUtils.get<AdminAuthPersisted>(localStorageKeys.auth)
+    const saved = localStorageUtils.get<AdminAuthPersisted>(
+      localStorageKeys.auth,
+    )
     if (saved) {
       adminAuthStore.setState({
         ...saved,

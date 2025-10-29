@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as Auth2faRouteImport } from './routes/auth/2fa'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/auth/',
+  path: '/auth/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -33,30 +39,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth': typeof AuthIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth': typeof AuthIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/': typeof AuthIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/2fa' | '/auth/login'
+  fullPaths: '/' | '/auth/2fa' | '/auth/login' | '/auth'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/2fa' | '/auth/login'
-  id: '__root__' | '/' | '/auth/2fa' | '/auth/login'
+  to: '/' | '/auth/2fa' | '/auth/login' | '/auth'
+  id: '__root__' | '/' | '/auth/2fa' | '/auth/login' | '/auth/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   Auth2faRoute: typeof Auth2faRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthIndexRoute: typeof AuthIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/': {
+      id: '/auth/'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   Auth2faRoute: Auth2faRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthIndexRoute: AuthIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

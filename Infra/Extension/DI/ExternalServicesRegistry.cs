@@ -5,6 +5,7 @@ using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Infra.Docs;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using Wolverine;
 
 namespace IbraHabra.NET.Infra.Extension.DI;
@@ -70,7 +71,8 @@ public static class ExternalServicesRegistry
 
     public static void AddEnvBoundValues(this IServiceCollection services, IConfiguration config) =>
         services.Configure<JwtOptions>(config.GetSection("JWT"))
-            .Configure<IdentitySettingOptions>(config.GetSection("IDENTITY"));
+            .Configure<IdentitySettingOptions>(config.GetSection("IDENTITY"))
+            .Configure<CorsSettings>(config.GetSection("CORS"));
 
     public static void AddCachingConfig(this IServiceCollection services, IConfiguration config)
     {
@@ -91,5 +93,11 @@ public static class ExternalServicesRegistry
         }
 
         services.AddScoped<ICacheService, CacheService>();
+    }
+
+    public static void AddLoggerConfig(this IHostBuilder hostBuilder)
+    {
+        hostBuilder.UseSerilog((hostingContext, loggerConfig) =>
+            loggerConfig.ReadFrom.Configuration(hostingContext.Configuration));
     }
 }

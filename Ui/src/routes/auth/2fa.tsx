@@ -30,10 +30,7 @@ function TwoFactorPage() {
     },
     onSubmit: async ({ value }) => {
       verify2fa(
-        {
-          twoFactorCode: sessionCode,
-          code: value.code,
-        },
+        { twoFactorCode: sessionCode, code: value.code },
         {
           onSuccess: () => {
             adminAuthStoreAction.set2FaSessionCode(null)

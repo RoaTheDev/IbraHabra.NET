@@ -8,11 +8,12 @@ using Scalar.AspNetCore;
 DotEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.AddWolverineConfig();
-
+builder.Host.AddLoggerConfig();
 var config = builder.Configuration;
 var env = builder.Environment;
 builder.Services.AddEnvBoundValues(config);
 builder.Services.AddCachingConfig(config);
+builder.Services.AddCorsConfig(config);
 builder.Services.AddApiVersioningConfig();
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();
@@ -44,7 +45,7 @@ app.UseHttpsRedirection();
 app.UseExceptionHandler();
 app.UseStaticFiles();
 app.UseRouting();
-
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
