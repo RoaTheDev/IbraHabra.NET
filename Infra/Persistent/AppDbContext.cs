@@ -32,8 +32,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         ConfigureProject(builder);
         ConfigureUserAuditTrail(builder);
         ConfigureUserSession(builder);
-        
-        
     }
 
     private void ConfigureIdentity(ModelBuilder builder)
@@ -42,7 +40,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.ToTable("users", "identity");
             e.Property(f => f.FirstName).HasMaxLength(50);
-            e.Property(f => f.LastName).HasMaxLength(50); 
+            e.Property(f => f.LastName).HasMaxLength(50);
         });
         builder.Entity<Role>().ToTable("roles", "identity");
         builder.Entity<IdentityUserRole<Guid>>().ToTable("user_roles", "identity");
@@ -64,8 +62,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                 "(\"Properties\"->'authPolicy'->>'minPasswordLength') IS NULL " +
                 "OR (\"Properties\"->'authPolicy'->>'minPasswordLength')::int >= 6"
             ));
-
         });
+        builder.Entity<OpenIddictEntityFrameworkCoreAuthorization>(e =>
+        {
+            e.ToTable("oauth_authorizations", "identity");
+        });
+
+        builder.Entity<OpenIddictEntityFrameworkCoreScope>(e => { e.ToTable("oauth_scopes", "identity"); });
+
+        builder.Entity<OpenIddictEntityFrameworkCoreToken>(e => { e.ToTable("oauth_tokens", "identity"); });
 
         builder.Entity<OauthApplication>(e =>
         {
@@ -80,16 +85,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                 .HasForeignKey(oa => oa.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
-
-        // Configure other OpenIddict entities
-        builder.Entity<OpenIddictEntityFrameworkCoreAuthorization>(e =>
-        {
-            e.ToTable("oauth_authorizations", "identity");
-        });
-
-        builder.Entity<OpenIddictEntityFrameworkCoreScope>(e => { e.ToTable("oauth_scopes", "identity"); });
-
-        builder.Entity<OpenIddictEntityFrameworkCoreToken>(e => { e.ToTable("oauth_tokens", "identity"); });
     }
 
     private void ConfigureAvailableScope(ModelBuilder builder)

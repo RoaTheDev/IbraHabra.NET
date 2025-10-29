@@ -10,6 +10,7 @@ using IbraHabra.NET.Application.UseCases.Admin.Queries;
 using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
 
@@ -17,6 +18,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
 [Route("api/admin/auth")]
+[EnableCors("AdminPolicy")]
 public class AdminAuthController : BaseApiController
 {
     private readonly IMessageBus _bus;

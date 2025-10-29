@@ -6,6 +6,7 @@ using IbraHabra.NET.Application.UseCases.Admin.Queries;
 using IbraHabra.NET.Application.UseCases.Project.CreateProjectRole;
 using IbraHabra.NET.Application.UseCases.Project.DeleteProjectRole;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
 
@@ -18,6 +19,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 [ApiController]
 [Route("api/admin/projects/{projectId}/roles")]
 [Authorize(Policy = "AdminOnly")]
+[EnableCors("AdminPolicy")] 
 public class AdminProjectRolesController : BaseApiController
 {
     private readonly ICommandBus _bus;

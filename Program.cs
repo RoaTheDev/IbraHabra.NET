@@ -14,6 +14,7 @@ var env = builder.Environment;
 builder.Services.AddEnvBoundValues(config);
 builder.Services.AddCachingConfig(config);
 builder.Services.AddCorsConfig(config);
+builder.Services.AddCorsPolicyConfig();
 builder.Services.AddApiVersioningConfig();
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();

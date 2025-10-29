@@ -75,6 +75,11 @@ public class Repo<TEntity, TKey> : IRepo<TEntity, TKey> where TEntity : class, I
         return await query.ToListAsync();
     }
 
+    public async Task<IEnumerable<TProjection>> GetAllViaConditionAsync<TProjection>(Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, TProjection>> projection)
+    {
+        return await _dbSet.AsNoTracking().Where(predicate).Select(projection).ToListAsync(); 
+    }
+
     public async Task<TEntity?> GetViaConditionAsync(Expression<Func<TEntity, bool>> predicate)
     {
         return await _dbSet.AsNoTracking().FirstOrDefaultAsync(predicate);

@@ -10,7 +10,6 @@ public class Projects : IEntity<Guid>
     public string? LogoUrl { get; set; }
     public string? HomePageUrl { get; set; }
 
-    public string? AllowedCorsOrigins { get; set; }
     public bool AllowRegistration { get; set; } = true;
     public bool AllowSocialLogin { get; set; } = true;
     public bool IsActive { get; set; } = true;

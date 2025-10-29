@@ -2,6 +2,7 @@ using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.AssignRole;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
 
@@ -14,6 +15,7 @@ namespace IbraHabra.NET.Adapter.Controller;
 [ApiController]
 [Route("api/admin/roles")]
 [Authorize(Policy = "AdminOnly")]
+[EnableCors("AdminPolicy")]
 public class AdminRolesController : BaseApiController
 {
     private readonly ICommandBus _bus;

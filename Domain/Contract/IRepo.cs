@@ -12,7 +12,10 @@ public interface IRepo<TEntity, in TKey> where TEntity : class
     Task<IEnumerable<TEntity>> GetAllViaConditionAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeFunc = null);
-
+    Task<IEnumerable<TProjection>> GetAllViaConditionAsync<TProjection>(
+        Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TEntity, TProjection>> projection
+    );
     Task<TEntity?> GetViaConditionAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>> includeFunc);

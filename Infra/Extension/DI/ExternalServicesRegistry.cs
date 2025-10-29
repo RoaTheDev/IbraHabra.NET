@@ -3,7 +3,10 @@ using IbraHabra.NET.Application.Services;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Infra.Docs;
+using IbraHabra.NET.Infra.Filters;
+using IbraHabra.NET.Infra.Middleware;
 using IbraHabra.NET.Infra.Persistent;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Wolverine;
@@ -100,4 +103,7 @@ public static class ExternalServicesRegistry
         hostBuilder.UseSerilog((hostingContext, loggerConfig) =>
             loggerConfig.ReadFrom.Configuration(hostingContext.Configuration));
     }
+
+    public static void AddCorsPolicyConfig(this IServiceCollection services) =>
+        services.AddSingleton<ICorsPolicyProvider, DynamicCorsPolicyProvider>();
 }

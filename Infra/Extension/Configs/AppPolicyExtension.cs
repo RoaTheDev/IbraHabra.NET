@@ -32,14 +32,7 @@ public static class AppPolicyExtension
                         .AllowCredentials()
                         .WithExposedHeaders("Content-Disposition");
                 });
-                opts.AddPolicy("ClientPolicy", builder =>
-                {
-                    builder.SetIsOriginAllowed(_ => true)
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials()
-                        .WithExposedHeaders("WWW-Authenticate");
-                });
+                
                 if (corsSettings.EnableDevelopmentCors)
                 {
                     opts.AddPolicy("DevelopmentPolicy", builder =>

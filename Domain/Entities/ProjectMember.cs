@@ -7,7 +7,7 @@ public record ProjectMemberId(Guid ProjectId, Guid UserId);
 
 public class ProjectMember : IEntity<ProjectMemberId>
 {
-    private ProjectMemberId? _id; // memoized  
+    private ProjectMemberId? _id;
     public ProjectMemberId Id => _id ??= new(ProjectId, UserId);
     public Guid ProjectId { get; set; }
     public Guid UserId { get; set; }
