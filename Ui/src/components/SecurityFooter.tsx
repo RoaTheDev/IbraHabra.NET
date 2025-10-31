@@ -35,7 +35,7 @@ export const SecurityFooter = () => {
   ]
 
   return (
-    <footer className="bg-card/95 backdrop-blur-md border-t border-border py-2.5 px-6 lg:ml-64">
+    <footer className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border py-2.5 px-6 lg:ml-64 z-40">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           {stats.map((stat) => (

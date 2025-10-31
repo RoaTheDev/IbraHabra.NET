@@ -13,7 +13,6 @@ import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
 import { ReactNode } from 'react'
-import { adminAuthStoreAction } from '@/stores/adminAuthStore.ts'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -53,9 +52,6 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: ReactNode }) {
-  if (typeof window !== 'undefined') {
-    adminAuthStoreAction.rehydrate()
-  }
   return (
     <html lang="en">
       <head>

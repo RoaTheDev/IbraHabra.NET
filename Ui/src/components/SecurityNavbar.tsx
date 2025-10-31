@@ -1,12 +1,24 @@
-// SecurityNavbar.tsx
 import { Activity, Menu, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
 
 interface SecurityNavbarProps {
   onMenuClick: () => void
 }
 
 export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
+  const [currentTime, setCurrentTime] = useState<string>('')
+
+  useEffect(() => {
+    setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }))
+
+    const interval = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }))
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <nav className="h-14 bg-card/95 backdrop-blur-md border-b border-primary/30 flex items-center px-6 sticky top-0 z-50 lg:ml-64">
       <Button
@@ -40,8 +52,8 @@ export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
             Online
           </span>
         </div>
-        <div className="text-xs font-mono text-muted-foreground">
-          {new Date().toLocaleTimeString('en-US', { hour12: false })}
+        <div className="text-xs font-mono text-muted-foreground" suppressHydrationWarning>
+          {currentTime || '00:00:00'}
         </div>
       </div>
     </nav>

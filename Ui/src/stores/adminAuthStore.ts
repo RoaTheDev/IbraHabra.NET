@@ -1,6 +1,6 @@
 import { Store } from '@tanstack/store'
-import { localStorageUtils } from '@/lib/localStorageUtils.ts'
 import { localStorageKeys } from '@/constants/localStorageConstant.ts'
+import { cookieUtils } from '@/lib/cookieStorageUtils.ts'
 
 export type AdminUser = {
   userId: string
@@ -30,7 +30,10 @@ export const adminAuthStore = new Store<AdminAuthState>({
   loading: false,
   expiresAt: null,
 })
+
+let isRehydrating = false
 adminAuthStore.subscribe((value) => {
+  if (isRehydrating) return
   const { prevVal, currentVal } = value
 
   if (
@@ -40,7 +43,7 @@ adminAuthStore.subscribe((value) => {
     prevVal.sessionCode2Fa !== currentVal.sessionCode2Fa
   ) {
     const { loading, ...persisted } = currentVal
-    localStorageUtils.set(localStorageKeys.auth, persisted)
+    cookieUtils.set(localStorageKeys.auth, JSON.stringify(persisted))
   }
 })
 
@@ -71,14 +74,16 @@ export const adminAuthStoreAction = {
     }),
 
   rehydrate: () => {
-    const saved = localStorageUtils.get<AdminAuthPersisted>(
-      localStorageKeys.auth,
-    )
+    const saved = cookieUtils.get(localStorageKeys.auth)
     if (saved) {
-      adminAuthStore.setState({
-        ...saved,
-        loading: false,
-      })
+      try {
+        const parsed = JSON.parse(saved)
+        isRehydrating = true
+        adminAuthStore.setState({ ...parsed, loading: false })
+        isRehydrating = false
+      } catch {
+        cookieUtils.remove(localStorageKeys.auth)
+      }
     }
   },
 }

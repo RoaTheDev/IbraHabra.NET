@@ -44,7 +44,7 @@ public static class ApiErrors
         );
         public static ApiError NotFound() => new(
             "USER_NOT_FOUND",
-            "User not found. The user may have been deleted or the ID is incorrect.",
+            "User not found. The user may have been deleted or the credential is incorrect.",
             ErrorType.NotFound
         );
 
