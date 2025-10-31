@@ -49,18 +49,8 @@ export const useLogin = () =>
           requiresTwoFactor: data.requiresTwoFactor,
           email: data.email,
         }
-        adminAuthStoreAction.setUser(user)
-        adminAuthStoreAction.setToken(data.token)
-        adminAuthStoreAction.setExpireAt(data.expiresAt)
+        adminAuthStoreAction.setAuth(user, data.token, data.expiresAt)
       }
-      const { user, token, expiresAt, sessionCode2Fa } = adminAuthStore.state
-      const persisted: AdminAuthPersisted = {
-        user,
-        token,
-        expiresAt,
-        sessionCode2Fa,
-      }
-      localStorageUtils.set(localStorageKeys.auth, persisted)
     },
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })
@@ -81,10 +71,8 @@ export const useVerify2Fa = () =>
         email: data.email,
         requiresTwoFactor: true,
       }
-      adminAuthStoreAction.setUser(userData)
-      adminAuthStoreAction.setExpireAt(data.expiresAt)
-      adminAuthStoreAction.setToken(data.token)
-      adminAuthStoreAction.set2FaSessionCode(null)
+
+      adminAuthStoreAction.setAuth(userData, data.token, data.expiresAt)
       const { user, token, expiresAt, sessionCode2Fa } = adminAuthStore.state
       const persisted: AdminAuthPersisted = {
         user,

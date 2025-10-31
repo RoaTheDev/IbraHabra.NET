@@ -8,7 +8,7 @@ using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Users.Commands.Verify2Fa;
 
-public record Verify2FaCommand(string TwoFactorToken, string Totp, string ClientId);
+public record Verify2FaCommand(string SessionKey, string Totp, string ClientId);
 
 public record Verify2FaResponse(Guid Id);
 
@@ -16,21 +16,21 @@ public class Verify2FaHandler : IWolverineHandler
 {
     public static async Task<ApiResult<Verify2FaResponse>> Handle(Verify2FaCommand command,
         UserManager<User> userManager, SignInManager<User> signInManager, IRepo<OauthApplication, string> repo,
-        ITwoFactorTokenService tokenService)
+        ICacheService cache)
     {
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive,
             c => new { c.ClientId });
         if (client == null)
             return ApiResult<Verify2FaResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
-
-        var tokenData = await tokenService.ValidateAndRemoveTokenAsync(command.TwoFactorToken);
-        if (tokenData == null)
+        string cacheKey = $"client_{command.ClientId}_{command.SessionKey}";
+        var cached2Fa = await cache.GetAsync<Client2FaCache>(cacheKey);
+        if (cached2Fa == null)
             return ApiResult<Verify2FaResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
 
-        if (tokenData.Value.ClientId != client.ClientId)
+        if (cached2Fa.ClientId != client.ClientId)
             return ApiResult<Verify2FaResponse>.Fail(ApiErrors.OAuthApplication.InvalidClient());
 
-        var user = await userManager.FindByIdAsync(tokenData.Value.UserId.ToString());
+        var user = await userManager.FindByIdAsync(cached2Fa.Id.ToString());
 
         if (user is null)
             return ApiResult<Verify2FaResponse>.Fail(ApiErrors.User.NotFound());

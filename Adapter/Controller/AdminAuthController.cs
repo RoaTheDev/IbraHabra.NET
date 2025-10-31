@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Confirm2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.CreateUser;
@@ -17,8 +18,10 @@ using Wolverine;
 namespace IbraHabra.NET.Adapter.Controller;
 
 [ApiController]
-[Route("api/admin/auth")]
+[Route("v{version:apiVersion}/api/admin/auth")]
 [EnableCors("AdminPolicy")]
+[Authorize(Policy = "AdminOnly")]
+[ApiVersion("1.0")]
 public class AdminAuthController : BaseApiController
 {
     private readonly IMessageBus _bus;
@@ -34,6 +37,7 @@ public class AdminAuthController : BaseApiController
     /// </summary>
     [HttpPost("login")]
     [ValidateModel<LoginAdminCommand>]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<LoginAdminCommandResponse>>(command);
@@ -87,6 +91,7 @@ public class AdminAuthController : BaseApiController
     /// Verify 2FA code for admin login
     /// </summary>
     [HttpPost("verify-2fa")]
+    [AllowAnonymous]
     public async Task<IActionResult> Verify2Fa([FromBody] Verify2FaAdminCommand command)
     {
         var result = await _bus.InvokeAsync<ApiResult<Verify2FaAdminCommandResponse>>(command);
@@ -97,7 +102,7 @@ public class AdminAuthController : BaseApiController
     /// Refresh admin JWT token
     /// </summary>
     [HttpPost("refresh")]
-    [Authorize(Policy = "AdminOnly")]
+    [AllowAnonymous]
     public async Task<IActionResult> RefreshToken()
     {
         var authHeader = HttpContext.Request.Headers.Authorization.ToString();

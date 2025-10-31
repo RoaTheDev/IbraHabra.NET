@@ -17,34 +17,6 @@ namespace IbraHabra.NET.Infra.Extension.Configs;
 
 public static class AppPolicyExtension
 {
-    public static void AddCorsConfig(this IServiceCollection services, IConfiguration config) =>
-        services.AddCors(opts =>
-            {
-                var corsSettings = config.GetSection("CORS").Get<CorsSettings>() ?? new CorsSettings();
-
-                opts.AddPolicy("AdminPolicy", builder =>
-                {
-                    var adminOrigins = corsSettings.AdminOrigins;
-
-                    builder.WithOrigins(adminOrigins)
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials()
-                        .WithExposedHeaders("Content-Disposition");
-                });
-                
-                if (corsSettings.EnableDevelopmentCors)
-                {
-                    opts.AddPolicy("DevelopmentPolicy", builder =>
-                    {
-                        builder.WithOrigins(corsSettings.DevelopmentOrigins)
-                            .AllowAnyMethod()
-                            .AllowAnyHeader()
-                            .AllowCredentials();
-                    });
-                }
-            }
-        );
 
 
     public static void AddIdentityConfig(this IServiceCollection services, IConfiguration config)

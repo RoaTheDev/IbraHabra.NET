@@ -5,6 +5,7 @@ using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using IbraHabra.NET.Infra.Persistent.Projections;
+using ImTools;
 using Microsoft.AspNetCore.Identity;
 using Wolverine;
 
@@ -15,7 +16,7 @@ public record LoginUserCommand(string Email, string Password, string ClientId);
 public record LoginUserCommandResponse(
     Guid? UserId = null,
     bool RequiresTwoFactor = false,
-    string? TwoFactorToken = null);
+    string? SessionKey = null);
 
 public class LoginUserHandler : IWolverineHandler
 {
@@ -24,11 +25,10 @@ public class LoginUserHandler : IWolverineHandler
         IRepo<OauthApplication, string> repo,
         UserManager<User> userManager,
         SignInManager<User> signInManager,
-        ITwoFactorTokenService tokenService)
+        ICacheService cache)
     {
         var client = await repo.GetViaConditionAsync(c => c.ClientId == command.ClientId && c.IsActive, c =>
             new AuthPolicyProjections(c.Properties));
-
         if (client is null)
             return ApiResult<LoginUserCommandResponse>.Fail(ApiErrors.OAuthApplication.NotFound());
 
@@ -60,12 +60,14 @@ public class LoginUserHandler : IWolverineHandler
 
         if (result.RequiresTwoFactor)
         {
-            var twoFactorToken = await tokenService.CreateTokenAsync(user.Id, command.ClientId);
+            Guid sessionKey = Guid.CreateVersion7();
+            string cacheKey = $"client_{command.ClientId}_{sessionKey}";
+            await cache.SetAsync(cacheKey, new Client2FaCache(user.Id, command.ClientId));
 
             return ApiResult<LoginUserCommandResponse>.Ok(new(
                 UserId: null,
                 RequiresTwoFactor: true,
-                TwoFactorToken: twoFactorToken));
+                SessionKey: sessionKey.ToString()));
         }
 
         if (policy.RequireMfa && !await userManager.GetTwoFactorEnabledAsync(user))

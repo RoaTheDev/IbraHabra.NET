@@ -1,8 +1,11 @@
 import type { AxiosInstance, AxiosRequestConfig } from 'axios'
 import axios from 'axios'
-import { localStorageUtils } from './localStorageUtils'
-import { localStorageKeys } from '@/constants/localStorageConstant.ts'
-import { LoginResponse } from '@/features/admin/auth/adminAuthTypes.ts'
+import {
+  adminAuthStore,
+  adminAuthStoreAction,
+} from '@/stores/adminAuthStore.ts'
+import { ApiResponse } from '@/types/ApiResponse.ts'
+import { RefreshTokenResponse } from '@/features/admin/auth/adminAuthTypes.ts'
 
 interface ApiConfig {
   baseURL: string
@@ -10,7 +13,7 @@ interface ApiConfig {
 }
 
 class ApiClient {
-  private client: AxiosInstance
+  private readonly client: AxiosInstance
 
   constructor(config: ApiConfig) {
     this.client = axios.create({
@@ -63,12 +66,63 @@ class ApiClient {
 
   private setupInterceptors(): void {
     this.client.interceptors.request.use((config) => {
-      const auth = localStorageUtils.get<LoginResponse>(localStorageKeys.auth)
-      if (auth?.token && config.headers) {
-        config.headers.Authorization = `Bearer ${auth.token}`
+      const token = adminAuthStore.state.token
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`
       }
       return config
     })
+
+    this.client.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true
+
+          try {
+            const jwtToken = adminAuthStore.state.token
+            if (!jwtToken) throw new Error('Cannot refresh')
+
+            const refreshClient = axios.create({
+              baseURL: this.client.defaults.baseURL,
+              timeout: this.client.defaults.timeout,
+            })
+
+            const response = await refreshClient.post<
+              ApiResponse<RefreshTokenResponse>
+            >(
+              '/admin/auth/refresh',
+              {},
+              {
+                headers: {
+                  Authorization: `Bearer ${jwtToken}`,
+                  'Content-Type': 'application/json',
+                },
+              },
+            )
+
+            const { token, expiredAt } = response.data.data
+
+            adminAuthStoreAction.setAuth(
+              adminAuthStore.state.user!,
+              token,
+              expiredAt,
+            )
+
+            originalRequest.headers['Authorization'] = `Bearer ${token}`
+            return this.client(originalRequest)
+          } catch (refreshError) {
+            adminAuthStoreAction.reset()
+            window.location.href = '/auth/login'
+            return Promise.reject(refreshError)
+          }
+        }
+
+        return Promise.reject(error)
+      },
+    )
   }
 }
 

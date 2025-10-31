@@ -1,5 +1,6 @@
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Domain.Constants;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -7,7 +8,7 @@ using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Users.Commands;
 
-public record Enable2FaComplianceCommand(string ComplianceToken, string Code, string ClientId);
+public record Enable2FaComplianceCommand(string SessionKey, string Code, string ClientId);
 
 public record Enable2FaComplianceResponse(string[] RecoveryCodes, Guid UserId);
 
@@ -16,17 +17,17 @@ public class Enable2FComplianceHandler : IWolverineHandler
     public static async Task<ApiResult<Enable2FaComplianceResponse>> Handle(
         Enable2FaComplianceCommand command,
         UserManager<User> userManager,
-        SignInManager<User> signInManager,
-        ITwoFactorTokenService tokenService)
+        SignInManager<User> signInManager, ICacheService cache)
     {
-        var tokenData = await tokenService.ValidateAndRemoveTokenAsync(command.ComplianceToken);
-        if (tokenData == null)
+        var cacheKey = $"compliance_2fa_{command.SessionKey}_{command.ClientId}";
+        var cache2Fa = await cache.GetAsync<Client2FaCache>(cacheKey);
+        if (cache2Fa is null)
             return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.Authentication.InvalidToken());
 
-        if (tokenData.Value.ClientId != command.ClientId)
+        if (cache2Fa.ClientId != command.ClientId)
             return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.OAuthApplication.InvalidClient());
 
-        var user = await userManager.FindByIdAsync(tokenData.Value.UserId.ToString());
+        var user = await userManager.FindByIdAsync(cache2Fa.Id.ToString());
         if (user == null)
             return ApiResult<Enable2FaComplianceResponse>.Fail(ApiErrors.User.NotFound());
 

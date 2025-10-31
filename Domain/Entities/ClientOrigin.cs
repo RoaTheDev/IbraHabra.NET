@@ -1,6 +1,8 @@
+using IbraHabra.NET.Domain.Contract;
+
 namespace IbraHabra.NET.Domain.Entities;
 
-public class ClientOrigin
+public class ClientOrigin : IEntity<Guid>
 {
     public Guid Id { get; set; }
     public Guid ClientId { get; set; }

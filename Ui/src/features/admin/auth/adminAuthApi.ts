@@ -8,8 +8,6 @@ import {
   Enable2FaAdminResponse,
   LoginRequest,
   LoginResponse,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
   Verify2FaAdminRequest,
   Verify2FaAdminResponse,
   VerifyAdminUserResponse,
@@ -17,7 +15,7 @@ import {
 import { ApiResponse } from '@/types/ApiResponse.ts'
 import { CreateUserRequest } from '@/features/admin/manageUser/adminManageType.ts'
 
-const baseUrl = '/auth'
+const baseUrl = '/admin/auth'
 
 const endpoint = {
   login: `${baseUrl}/login`,
@@ -28,7 +26,6 @@ const endpoint = {
   confirm2fa: `${baseUrl}/2fa/enable/confirm`,
   verify2fa: `${baseUrl}/verify-2fa`,
   verify: `${baseUrl}/verify`,
-  refresh: `${baseUrl}/refresh`,
   logout: `${baseUrl}/logout`,
 }
 
@@ -59,13 +56,6 @@ export const authApi = {
     payload: ConfirmEnable2FaAdminRequest,
   ): Promise<ApiResponse<ConfirmEnable2FaAdminResponse>> =>
     apiClient.post(endpoint.confirm2fa, payload),
-  refresh: (
-    payload: RefreshTokenRequest,
-  ): Promise<ApiResponse<RefreshTokenResponse>> =>
-    apiClient.post<ApiResponse<RefreshTokenResponse>>(
-      endpoint.refresh,
-      payload,
-    ),
   verify: (): Promise<ApiResponse<VerifyAdminUserResponse>> =>
     apiClient.get(endpoint.verify),
   logout: (): Promise<ApiResponse<string>> => apiClient.post(endpoint.logout),

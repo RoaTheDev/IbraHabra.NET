@@ -14,8 +14,8 @@ public static class InternalServiceRegistry
 
     public static void RegisterServices(this IServiceCollection services) =>
         services.AddScoped<ICurrentUserService, CurrentUserService>()
-            .AddScoped<ITwoFactorTokenService, TwoFactorTokenService>()
             .AddScoped<IClientSecretHasher, ClientSecretHasher>();
+
     public static void AddApiVersioningConfig(this IServiceCollection services)
     {
         services.AddApiVersioning(options =>
@@ -30,5 +30,4 @@ public static class InternalServiceRegistry
             options.SubstituteApiVersionInUrl = true;
         });
     }
-
 }

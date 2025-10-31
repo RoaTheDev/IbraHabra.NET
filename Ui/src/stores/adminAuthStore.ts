@@ -30,18 +30,46 @@ export const adminAuthStore = new Store<AdminAuthState>({
   loading: false,
   expiresAt: null,
 })
+adminAuthStore.subscribe((value) => {
+  const { prevVal, currentVal } = value
+
+  if (
+    prevVal.user !== currentVal.user ||
+    prevVal.token !== currentVal.token ||
+    prevVal.expiresAt !== currentVal.expiresAt ||
+    prevVal.sessionCode2Fa !== currentVal.sessionCode2Fa
+  ) {
+    const { loading, ...persisted } = currentVal
+    localStorageUtils.set(localStorageKeys.auth, persisted)
+  }
+})
 
 export const adminAuthStoreAction = {
   setLoading: (loading: boolean) =>
     adminAuthStore.setState((prev) => ({ ...prev, loading })),
-  setUser: (user: AdminUser) =>
-    adminAuthStore.setState((prev) => ({ ...prev, user })),
-  setExpireAt: (expiresAt: string) =>
-    adminAuthStore.setState((prev) => ({ ...prev, expiresAt })),
+
+  setAuth: (user: AdminUser, token: string, expiresAt: string) =>
+    adminAuthStore.setState((prev) => ({
+      ...prev,
+      user,
+      token,
+      expiresAt,
+      sessionCode2Fa: null,
+    })),
   setToken: (token: string) =>
-    adminAuthStore.setState((prev) => ({ ...prev, token })),
+    adminAuthStore.setState((prev) => ({ ...prev, token: token })),
+
   set2FaSessionCode: (session: string | null) =>
     adminAuthStore.setState((prev) => ({ ...prev, sessionCode2Fa: session })),
+  reset: () =>
+    adminAuthStore.setState({
+      user: null,
+      token: null,
+      expiresAt: null,
+      sessionCode2Fa: null,
+      loading: false,
+    }),
+
   rehydrate: () => {
     const saved = localStorageUtils.get<AdminAuthPersisted>(
       localStorageKeys.auth,
@@ -53,12 +81,4 @@ export const adminAuthStoreAction = {
       })
     }
   },
-  reset: () =>
-    adminAuthStore.setState({
-      user: null,
-      token: null,
-      expiresAt: null,
-      sessionCode2Fa: null,
-      loading: false,
-    }),
 }

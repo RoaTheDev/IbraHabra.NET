@@ -105,5 +105,5 @@ public static class ExternalServicesRegistry
     }
 
     public static void AddCorsPolicyConfig(this IServiceCollection services) =>
-        services.AddSingleton<ICorsPolicyProvider, DynamicCorsPolicyProvider>();
+        services.AddScoped<ICorsPolicyProvider, DynamicCorsPolicyProvider>();
 }

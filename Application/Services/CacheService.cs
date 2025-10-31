@@ -31,26 +31,22 @@ public class CacheService : ICacheService
         if (_useRedis)
         {
             var cacheOptions = new DistributedCacheEntryOptions();
-            if (expiration.HasValue)
-            {
-                if (sliding)
-                    cacheOptions.SlidingExpiration = expiration;
-                else
-                    cacheOptions.AbsoluteExpirationRelativeToNow = expiration;
-            }
+
+            if (sliding)
+                cacheOptions.SlidingExpiration = expiration ?? TimeSpan.FromMinutes(15);
+            else
+                cacheOptions.AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15);
 
             await _redisCache!.SetStringAsync(key, json, cacheOptions);
         }
         else
         {
             var memoryOptions = new MemoryCacheEntryOptions();
-            if (expiration.HasValue)
-            {
-                if (sliding)
-                    memoryOptions.SlidingExpiration = expiration;
-                else
-                    memoryOptions.AbsoluteExpirationRelativeToNow = expiration;
-            }
+            if (sliding)
+                memoryOptions.SlidingExpiration = expiration ?? TimeSpan.FromMinutes(15);
+            else
+                memoryOptions.AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15);
+
 
             _memoryCache.Set(key, json, memoryOptions);
         }

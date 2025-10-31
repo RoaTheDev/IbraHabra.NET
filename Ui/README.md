@@ -55,7 +55,7 @@ pnpx shadcn@latest add button
 ## Routing
 This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
 
-### Adding A Route
+### Adding A _layout
 
 To add a new route to your application just add another a new file in the `./src/routes` directory.
 
@@ -93,7 +93,7 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 import { Link } from "@tanstack/react-router";
 
-export const Route = createRootRoute({
+export const _layout = createRootRoute({
   component: () => (
     <>
       <header>

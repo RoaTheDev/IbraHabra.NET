@@ -24,6 +24,24 @@ public class DynamicCorsPolicyProvider : ICorsPolicyProvider
 
     public async Task<CorsPolicy?> GetPolicyAsync(HttpContext context, string? policyName)
     {
+        if (!string.IsNullOrEmpty(policyName))
+        {
+            if (policyName == "AdminPolicy")
+            {
+                var corsSettings = context.RequestServices
+                    .GetRequiredService<IConfiguration>()
+                    .GetSection("CORS")
+                    .Get<CorsSettings>() ?? new CorsSettings();
+                return new CorsPolicyBuilder()
+                    .WithOrigins(corsSettings.AdminOrigins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials()
+                    .WithExposedHeaders("Content-Disposition")
+                    .Build();
+            }
+        }
+
         var origin = context.Request.Headers.Origin.ToString();
         if (string.IsNullOrWhiteSpace(origin))
             return null;

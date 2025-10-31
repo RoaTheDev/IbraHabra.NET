@@ -31,7 +31,7 @@ export type RefreshTokenRequest = {
 }
 export type RefreshTokenResponse = {
   token: string
-  ExpiredAt: Date
+  expiredAt: string
 }
 
 export type Verify2FaAdminRequest = {
