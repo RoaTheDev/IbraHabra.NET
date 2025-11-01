@@ -25,7 +25,9 @@ public class Verify2FaAdminHandler : IWolverineHandler
         UserManager<User> userManager,
         SignInManager<User> signInManager,
         ICacheService cache,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        IHttpContextAccessor httpContextAccessor,
+        IRefreshTokenService refreshTokenService)
     {
         var cachedEmail = await cache.GetAsync<string>($"2fa:{command.Session2Fa}");
         await cache.RemoveAsync($"2fa:{command.Session2Fa}");
@@ -52,6 +54,8 @@ public class Verify2FaAdminHandler : IWolverineHandler
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
         var expiresAt = DateTime.UtcNow.AddHours(8);
+        var refreshToken = await refreshTokenService.GenerateAndStoreAsync(user.Id);
+        refreshTokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
 
         return ApiResult<Verify2FaAdminCommandResponse>.Ok(new Verify2FaAdminCommandResponse(
             UserId: user.Id,

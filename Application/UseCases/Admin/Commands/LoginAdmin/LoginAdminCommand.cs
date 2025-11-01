@@ -27,7 +27,10 @@ public class LoginAdminHandler : IWolverineHandler
         UserManager<User> userManager,
         SignInManager<User> signInManager,
         ICacheService cache,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        IHttpContextAccessor httpContextAccessor,
+        IRefreshTokenService refreshTokenService
+    )
     {
         var user = await userManager.FindByEmailAsync(command.Email);
         if (user == null)
@@ -66,7 +69,10 @@ public class LoginAdminHandler : IWolverineHandler
         }
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
-        var expiresAt = DateTime.UtcNow.AddHours(8);
+        var expiresAt = DateTime.UtcNow.AddHours(1);
+
+        var refreshToken = await refreshTokenService.GenerateAndStoreAsync(user.Id);
+        refreshTokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
 
         return ApiResult<LoginAdminCommandResponse>.Ok(new LoginAdminCommandResponse(
             UserId: user.Id,

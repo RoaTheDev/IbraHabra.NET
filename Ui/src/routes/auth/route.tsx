@@ -1,7 +1,15 @@
+import { adminAuthStoreAction } from '@/stores/adminAuthStore'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/auth')({
   component: AuthLayout,
+  ssr: false,
+  staleTime: 1000 * 60 * 10,
+  beforeLoad: () => {
+    if (typeof window !== 'undefined') {
+      adminAuthStoreAction.rehydrate()
+    }
+  },
 })
 
 function AuthLayout() {

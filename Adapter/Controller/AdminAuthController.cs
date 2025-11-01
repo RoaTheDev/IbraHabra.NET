@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using IbraHabra.NET.Application.Dto;
+using IbraHabra.NET.Application.UseCases.Admin.Commands;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Confirm2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.CreateUser;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Disable2FaAdmin;
@@ -8,7 +9,6 @@ using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RefreshAdminToken;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Verify2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
-using IbraHabra.NET.Application.Utils;
 using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -145,8 +145,11 @@ public class AdminAuthController : BaseApiController
     /// </summary>
     [HttpPost("logout")]
     [Authorize(Policy = "AdminOnly")]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
-        return Ok(ApiResponseBuilder.Build(HttpContext, ApiResult.Ok()));
+        var result = await _bus.InvokeAsync<ApiResult>(
+            new LogoutAdminCommand());
+
+        return FromApiResult(result);
     }
 }

@@ -14,7 +14,8 @@ public static class InternalServiceRegistry
 
     public static void RegisterServices(this IServiceCollection services) =>
         services.AddScoped<ICurrentUserService, CurrentUserService>()
-            .AddScoped<IClientSecretHasher, ClientSecretHasher>();
+            .AddScoped<IClientSecretHasher, ClientSecretHasher>()
+            .AddScoped<IRefreshTokenService, RefreshTokenService>();
 
     public static void AddApiVersioningConfig(this IServiceCollection services)
     {

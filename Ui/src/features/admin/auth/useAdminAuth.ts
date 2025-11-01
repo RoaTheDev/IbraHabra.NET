@@ -13,7 +13,7 @@ import {
   Verify2FaAdminRequest,
   Verify2FaAdminResponse,
 } from '@/features/admin/auth/adminAuthTypes.ts'
-import { localStorageKeys } from '@/constants/localStorageConstant.ts'
+import { cacheKeys } from '@/constants/cacheKeys.ts'
 import { ApiResponse } from '@/types/ApiResponse.ts'
 import { AxiosError } from 'axios'
 
@@ -80,7 +80,7 @@ export const useVerify2Fa = () =>
         expiresAt,
         sessionCode2Fa,
       }
-      localStorageUtils.set(localStorageKeys.auth, persisted)
+      localStorageUtils.set(cacheKeys.auth, persisted)
     },
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })

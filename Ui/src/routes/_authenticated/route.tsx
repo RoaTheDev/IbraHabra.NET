@@ -11,16 +11,19 @@ import { authApi } from '@/features/admin/auth/adminAuthApi.ts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, ShieldCheck } from 'lucide-react'
 import { SidebarContext } from '@/stores/SidebarContext'
+import { cacheKeys } from '@/constants/cacheKeys.ts'
 
+const VERIFY_INTERVAL = 1000 * 60 * 15
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
-  staleTime: 1000 * 60 * 10,
+  staleTime: Infinity,
   ssr: false,
   pendingComponent: AuthLoadingSkeleton,
   beforeLoad: async () => {
     if (typeof window !== 'undefined') {
       adminAuthStoreAction.rehydrate()
     }
+
     const { token, sessionCode2Fa } = adminAuthStore.state
 
     if (!token) {
@@ -31,10 +34,28 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/auth/2fa' })
     }
 
-    try {
-      await authApi.verify()
-    } catch {
-      throw redirect({ to: '/auth/login' })
+    if (typeof window !== 'undefined') {
+      const lastVerified = sessionStorage.getItem(
+        cacheKeys.last_verified_session,
+      )
+      const now = Date.now()
+
+      const shouldVerify =
+        !lastVerified || now - parseInt(lastVerified) > VERIFY_INTERVAL
+
+      if (shouldVerify) {
+        try {
+          await authApi.verify()
+          sessionStorage.setItem(
+            cacheKeys.last_verified_session,
+            now.toString(),
+          )
+        } catch (error) {
+          sessionStorage.removeItem(cacheKeys.last_verified_session)
+          adminAuthStoreAction.reset()
+          throw redirect({ to: '/auth/login' })
+        }
+      }
     }
   },
 })
