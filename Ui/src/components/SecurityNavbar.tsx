@@ -8,19 +8,21 @@ interface SecurityNavbarProps {
 
 export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
   const [currentTime, setCurrentTime] = useState<string>('')
+  const [isClient, setIsClient] = useState(false)
+  useEffect(() => setIsClient(true), [])
 
   useEffect(() => {
-    setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }))
+    setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: true }))
 
     const interval = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }))
+      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: true }))
     }, 1000)
 
     return () => clearInterval(interval)
   }, [])
 
   return (
-    <nav className="h-14 bg-card/95 backdrop-blur-md border-b border-primary/30 flex items-center px-6 sticky top-0 z-50 lg:ml-64">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-card/95 backdrop-blur-md border-b border-primary/30 flex items-center px-6 z-50 lg:left-64">
       <Button
         variant="ghost"
         size="icon"
@@ -52,8 +54,8 @@ export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
             Online
           </span>
         </div>
-        <div className="text-xs font-mono text-muted-foreground" suppressHydrationWarning>
-          {currentTime || '00:00:00'}
+        <div className="text-xs font-mono text-muted-foreground">
+          {isClient ? currentTime : '00:00:00'}
         </div>
       </div>
     </nav>

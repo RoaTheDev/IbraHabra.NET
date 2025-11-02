@@ -64,6 +64,7 @@ export const adminAuthStoreAction = {
 
   set2FaSessionCode: (session: string | null) =>
     adminAuthStore.setState((prev) => ({ ...prev, sessionCode2Fa: session })),
+
   reset: () =>
     adminAuthStore.setState({
       user: null,
@@ -80,9 +81,10 @@ export const adminAuthStoreAction = {
         const parsed = JSON.parse(saved)
         isRehydrating = true
         adminAuthStore.setState({ ...parsed, loading: false })
-        isRehydrating = false
       } catch {
         cookieUtils.remove(cacheKeys.auth)
+      } finally {
+        isRehydrating = false
       }
     }
   },

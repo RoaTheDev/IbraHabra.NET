@@ -14,6 +14,12 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as Auth2faRouteImport } from './routes/auth/2fa'
+import { Route as AuthenticatedUserRouteImport } from './routes/_authenticated/user'
+import { Route as AuthenticatedSysConfigRouteImport } from './routes/_authenticated/sys-config'
+import { Route as AuthenticatedRoleRouteImport } from './routes/_authenticated/role'
+import { Route as AuthenticatedProjectRouteImport } from './routes/_authenticated/project'
+import { Route as AuthenticatedClientRouteImport } from './routes/_authenticated/client'
+import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/auth',
@@ -39,15 +45,57 @@ const Auth2faRoute = Auth2faRouteImport.update({
   path: '/2fa',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const AuthenticatedUserRoute = AuthenticatedUserRouteImport.update({
+  id: '/user',
+  path: '/user',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSysConfigRoute = AuthenticatedSysConfigRouteImport.update({
+  id: '/sys-config',
+  path: '/sys-config',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRoleRoute = AuthenticatedRoleRouteImport.update({
+  id: '/role',
+  path: '/role',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProjectRoute = AuthenticatedProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedClientRoute = AuthenticatedClientRouteImport.update({
+  id: '/client',
+  path: '/client',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteRouteWithChildren
+  '/account': typeof AuthenticatedAccountRoute
+  '/client': typeof AuthenticatedClientRoute
+  '/project': typeof AuthenticatedProjectRoute
+  '/role': typeof AuthenticatedRoleRoute
+  '/sys-config': typeof AuthenticatedSysConfigRoute
+  '/user': typeof AuthenticatedUserRoute
   '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
+  '/account': typeof AuthenticatedAccountRoute
+  '/client': typeof AuthenticatedClientRoute
+  '/project': typeof AuthenticatedProjectRoute
+  '/role': typeof AuthenticatedRoleRoute
+  '/sys-config': typeof AuthenticatedSysConfigRoute
+  '/user': typeof AuthenticatedUserRoute
   '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
   '/': typeof AuthenticatedIndexRoute
@@ -56,19 +104,51 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
+  '/_authenticated/account': typeof AuthenticatedAccountRoute
+  '/_authenticated/client': typeof AuthenticatedClientRoute
+  '/_authenticated/project': typeof AuthenticatedProjectRoute
+  '/_authenticated/role': typeof AuthenticatedRoleRoute
+  '/_authenticated/sys-config': typeof AuthenticatedSysConfigRoute
+  '/_authenticated/user': typeof AuthenticatedUserRoute
   '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/auth' | '/auth/2fa' | '/auth/login' | '/'
+  fullPaths:
+    | '/auth'
+    | '/account'
+    | '/client'
+    | '/project'
+    | '/role'
+    | '/sys-config'
+    | '/user'
+    | '/auth/2fa'
+    | '/auth/login'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/auth/2fa' | '/auth/login' | '/'
+  to:
+    | '/auth'
+    | '/account'
+    | '/client'
+    | '/project'
+    | '/role'
+    | '/sys-config'
+    | '/user'
+    | '/auth/2fa'
+    | '/auth/login'
+    | '/'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/account'
+    | '/_authenticated/client'
+    | '/_authenticated/project'
+    | '/_authenticated/role'
+    | '/_authenticated/sys-config'
+    | '/_authenticated/user'
     | '/auth/2fa'
     | '/auth/login'
     | '/_authenticated/'
@@ -116,14 +196,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Auth2faRouteImport
       parentRoute: typeof AuthRouteRoute
     }
+    '/_authenticated/user': {
+      id: '/_authenticated/user'
+      path: '/user'
+      fullPath: '/user'
+      preLoaderRoute: typeof AuthenticatedUserRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sys-config': {
+      id: '/_authenticated/sys-config'
+      path: '/sys-config'
+      fullPath: '/sys-config'
+      preLoaderRoute: typeof AuthenticatedSysConfigRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/role': {
+      id: '/_authenticated/role'
+      path: '/role'
+      fullPath: '/role'
+      preLoaderRoute: typeof AuthenticatedRoleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/project': {
+      id: '/_authenticated/project'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof AuthenticatedProjectRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/client': {
+      id: '/_authenticated/client'
+      path: '/client'
+      fullPath: '/client'
+      preLoaderRoute: typeof AuthenticatedClientRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
+  AuthenticatedClientRoute: typeof AuthenticatedClientRoute
+  AuthenticatedProjectRoute: typeof AuthenticatedProjectRoute
+  AuthenticatedRoleRoute: typeof AuthenticatedRoleRoute
+  AuthenticatedSysConfigRoute: typeof AuthenticatedSysConfigRoute
+  AuthenticatedUserRoute: typeof AuthenticatedUserRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccountRoute: AuthenticatedAccountRoute,
+  AuthenticatedClientRoute: AuthenticatedClientRoute,
+  AuthenticatedProjectRoute: AuthenticatedProjectRoute,
+  AuthenticatedRoleRoute: AuthenticatedRoleRoute,
+  AuthenticatedSysConfigRoute: AuthenticatedSysConfigRoute,
+  AuthenticatedUserRoute: AuthenticatedUserRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

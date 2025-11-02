@@ -6,9 +6,7 @@ export const Route = createFileRoute('/auth')({
   ssr: false,
   staleTime: 1000 * 60 * 10,
   beforeLoad: () => {
-    if (typeof window !== 'undefined') {
       adminAuthStoreAction.rehydrate()
-    }
   },
 })
 

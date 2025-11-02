@@ -20,9 +20,7 @@ export const Route = createFileRoute('/_authenticated')({
   ssr: false,
   pendingComponent: AuthLoadingSkeleton,
   beforeLoad: async () => {
-    if (typeof window !== 'undefined') {
       adminAuthStoreAction.rehydrate()
-    }
 
     const { token, sessionCode2Fa } = adminAuthStore.state
 
