@@ -17,8 +17,6 @@ namespace IbraHabra.NET.Infra.Extension.Configs;
 
 public static class AppPolicyExtension
 {
-
-
     public static void AddIdentityConfig(this IServiceCollection services, IConfiguration config)
     {
         var jwt = config.GetSection("JWT").Get<JwtOptions>() ?? null;

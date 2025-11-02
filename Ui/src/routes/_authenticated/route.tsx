@@ -20,7 +20,7 @@ export const Route = createFileRoute('/_authenticated')({
   ssr: false,
   pendingComponent: AuthLoadingSkeleton,
   beforeLoad: async () => {
-      adminAuthStoreAction.rehydrate()
+    adminAuthStoreAction.rehydrate()
 
     const { token, sessionCode2Fa } = adminAuthStore.state
 
@@ -50,7 +50,6 @@ export const Route = createFileRoute('/_authenticated')({
           )
         } catch (error) {
           sessionStorage.removeItem(cacheKeys.last_verified_session)
-          adminAuthStoreAction.reset()
           throw redirect({ to: '/auth/login' })
         }
       }

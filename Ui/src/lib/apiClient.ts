@@ -19,6 +19,7 @@ class ApiClient {
     this.client = axios.create({
       baseURL: config.baseURL,
       timeout: config.timeout ?? 15000,
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -78,30 +79,27 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const isRefreshEndpoint = originalRequest.url?.includes(
+          '/refresh',
+        )
+
+
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !isRefreshEndpoint
+        ) {
           originalRequest._retry = true
 
           try {
             const jwtToken = adminAuthStore.state.token
             if (!jwtToken) throw new Error('Cannot refresh')
 
-            const refreshClient = axios.create({
-              baseURL: this.client.defaults.baseURL,
-              timeout: this.client.defaults.timeout,
-            })
-
-            const response = await refreshClient.post<
+            const response = await this.client.post<
               ApiResponse<RefreshTokenResponse>
             >(
               '/admin/auth/refresh',
-              {},
-              {
-                headers: {
-                  Authorization: `Bearer ${jwtToken}`,
-                  'Content-Type': 'application/json',
-                },
-              },
-            )
+              {})
 
             const { token, expiredAt } = response.data.data
 
@@ -114,10 +112,17 @@ class ApiClient {
             originalRequest.headers['Authorization'] = `Bearer ${token}`
             return this.client(originalRequest)
           } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError)
             adminAuthStoreAction.reset()
             window.location.href = '/auth/login'
             return Promise.reject(refreshError)
           }
+        }
+
+        if (isRefreshEndpoint && error.response?.status === 401) {
+          console.error('Refresh token invalid or expired')
+          adminAuthStoreAction.reset()
+          window.location.href = '/auth/login'
         }
 
         return Promise.reject(error)

@@ -4,11 +4,11 @@ using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Contract.Services;
 using IbraHabra.NET.Infra.Docs;
 using IbraHabra.NET.Infra.Filters;
-using IbraHabra.NET.Infra.Middleware;
 using IbraHabra.NET.Infra.Persistent;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using StackExchange.Redis;
 using Wolverine;
 
 namespace IbraHabra.NET.Infra.Extension.DI;
@@ -82,17 +82,50 @@ public static class ExternalServicesRegistry
         var redisKey = config.GetSection("REDIS");
         services.Configure<RedisOptions>(redisKey);
         var redisOptions = redisKey.Get<RedisOptions>();
+
+        services.AddMemoryCache();
+
         if (redisOptions is { UseRedis: true })
         {
-            services.AddStackExchangeRedisCache(options =>
+            try
             {
-                options.Configuration = redisOptions.RedisConnectionString;
-                options.InstanceName = "IbraHabra:";
-            });
+                services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = redisOptions.RedisConnectionString;
+                    options.InstanceName = "IbraHabra:";
+
+                    options.ConfigurationOptions = new ConfigurationOptions
+                    {
+                        EndPoints = { redisOptions.RedisConnectionString ?? "localhost:6379" },
+                        AbortOnConnectFail = false,
+                        ConnectTimeout = 500,
+                        SyncTimeout = 500,
+                        AsyncTimeout = 500,
+                        ConnectRetry = 1,
+                        KeepAlive = 60
+                    };
+                });
+
+                try
+                {
+                    using var connection = ConnectionMultiplexer.Connect(
+                        redisOptions.RedisConnectionString + ",abortConnect=false,connectTimeout=500"
+                    );
+                    Console.WriteLine("✅ Redis connected successfully");
+                }
+                catch
+                {
+                    Console.WriteLine("⚠️ Redis unavailable - falling back to in-memory cache");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Redis setup failed: {ex.Message} - using in-memory cache only");
+            }
         }
         else
         {
-            services.AddMemoryCache();
+            Console.WriteLine("ℹ️ Redis disabled - using in-memory cache only");
         }
 
         services.AddScoped<ICacheService, CacheService>();

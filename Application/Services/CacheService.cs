@@ -7,73 +7,135 @@ using Microsoft.Extensions.Options;
 
 namespace IbraHabra.NET.Application.Services;
 
+/// <summary>
+/// Cache service with automatic fallback from Redis to in-memory cache.
+/// If Redis is down, operations seamlessly fall back to memory cache.
+/// </summary>
 public class CacheService : ICacheService
 {
     private readonly IDistributedCache? _redisCache;
     private readonly IMemoryCache _memoryCache;
-
+    private readonly ILogger<CacheService> _logger;
     private readonly bool _useRedis;
 
     public CacheService(
         IDistributedCache? redisCache,
         IMemoryCache memoryCache,
+        ILogger<CacheService> logger,
         IOptions<RedisOptions> options)
     {
         _redisCache = redisCache;
         _memoryCache = memoryCache;
+        _logger = logger;
         _useRedis = options.Value.UseRedis && redisCache != null;
     }
 
-    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, bool sliding = false)
+   public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, bool sliding = false)
+{
+    // Serialize once for both caches
+    var serialized = JsonSerializer.Serialize(value);
+    
+    // Store JSON string in memory cache
+    var cacheOptions = new MemoryCacheEntryOptions();
+    if (expiration.HasValue)
     {
-        var json = JsonSerializer.Serialize(value);
-
-        if (_useRedis)
-        {
-            var cacheOptions = new DistributedCacheEntryOptions();
-
-            if (sliding)
-                cacheOptions.SlidingExpiration = expiration ?? TimeSpan.FromMinutes(15);
-            else
-                cacheOptions.AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15);
-
-            await _redisCache!.SetStringAsync(key, json, cacheOptions);
-        }
+        if (sliding)
+            cacheOptions.SetSlidingExpiration(expiration.Value);
         else
-        {
-            var memoryOptions = new MemoryCacheEntryOptions();
-            if (sliding)
-                memoryOptions.SlidingExpiration = expiration ?? TimeSpan.FromMinutes(15);
-            else
-                memoryOptions.AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15);
-
-
-            _memoryCache.Set(key, json, memoryOptions);
-        }
+            cacheOptions.SetAbsoluteExpiration(expiration.Value);
     }
 
-    public async Task<T?> GetAsync<T>(string key)
+    _memoryCache.Set(key, serialized, cacheOptions); // ✅ Store as string
+
+    // Fire-and-forget Redis update with short timeout
+    if (_redisCache != null)
     {
-        string? json = null;
-        if (_useRedis)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var options = new DistributedCacheEntryOptions();
+
+                if (expiration.HasValue)
+                {
+                    if (sliding)
+                        options.SetSlidingExpiration(expiration.Value);
+                    else
+                        options.SetAbsoluteExpiration(expiration.Value);
+                }
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+                await _redisCache.SetStringAsync(key, serialized, options, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Redis SET failed for key '{Key}' (background)", key);
+            }
+        });
+    }
+}
+
+public async Task<T?> GetAsync<T>(string key)
+{
+    string? json = null;
+
+    if (_useRedis)
+    {
+        try
         {
             json = await _redisCache!.GetStringAsync(key);
-        }
-        else if (_memoryCache.TryGetValue(key, out string? memValue))
-        {
-            json = memValue;
-        }
 
-        return string.IsNullOrEmpty(json) ? default : JsonSerializer.Deserialize<T>(json);
+            if (!string.IsNullOrEmpty(json))
+            {
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
+                _memoryCache.Set(key, json, cacheOptions);
+                
+                return JsonSerializer.Deserialize<T>(json);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Redis GET failed for key '{Key}', falling back to in-memory cache", key);
+        }
     }
+
+    if (_memoryCache.TryGetValue(key, out string? memValue))
+    {
+        json = memValue;
+    }
+
+    return string.IsNullOrEmpty(json) ? default : JsonSerializer.Deserialize<T>(json);
+}
 
     public async Task RemoveAsync(string key)
     {
         if (_useRedis)
         {
-            await _redisCache!.RemoveAsync(key);
+            try
+            {
+                await _redisCache!.RemoveAsync(key);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Redis REMOVE failed for key '{Key}'", key);
+            }
         }
 
         _memoryCache.Remove(key);
+    }
+
+    private void SetInMemoryCache(string key, string json, TimeSpan expiration, bool sliding)
+    {
+        var memoryOptions = new MemoryCacheEntryOptions();
+
+        if (sliding)
+            memoryOptions.SlidingExpiration = expiration;
+        else
+            memoryOptions.AbsoluteExpirationRelativeToNow = expiration;
+
+        _memoryCache.Set(key, json, memoryOptions);
     }
 }

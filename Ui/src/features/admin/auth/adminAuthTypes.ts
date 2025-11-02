@@ -50,7 +50,7 @@ export type Enable2FaAdminResponse = {
   recoveryCodes: string[]
 }
 export type Disable2FaAdminRequest = {
-  password: string
+  code: string
 }
 export type Disable2FaAdminResponse = {
   success: boolean

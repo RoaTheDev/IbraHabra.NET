@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using IbraHabra.NET.Domain.Contract.Services;
 
 namespace IbraHabra.NET.Application.Services;
@@ -47,13 +48,14 @@ public class RefreshTokenService : IRefreshTokenService
 
     public void SetRefreshTokenCookie(HttpContext context, string refreshToken)
     {
+        var apiVersion = context.GetRequestedApiVersion()?.ToString() ?? "1.0";
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddDays(RefreshTokenExpirationDays),
-            Path = "/api/v1/api/admin/auth/refresh"
+            Path = $"/v{apiVersion}/api/admin/auth/refresh"
         };
 
         context.Response.Cookies.Append(CookieName, refreshToken, cookieOptions);
@@ -61,19 +63,20 @@ public class RefreshTokenService : IRefreshTokenService
 
     public void ClearRefreshTokenCookie(HttpContext context)
     {
+        var apiVersion = context.GetRequestedApiVersion()?.ToString() ?? "1.0";
         context.Response.Cookies.Delete(CookieName, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Path = "/api/v1/api/admin/auth/refresh"
+            Path = $"/v{apiVersion}/api/admin/auth/refresh"
         });
     }
 
     private static string GenerateSecureToken()
     {
         var randomBytes = new byte[64];
-        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes);
     }

@@ -53,10 +53,15 @@ export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
           <span className="text-xs font-mono text-security-success uppercase tracking-wide">
             Online
           </span>
+          <div>
+            <div className="text-xs font-mono text-muted-foreground">
+              {isClient && <span>{currentTime}</span>}
+            </div>
+          </div>
         </div>
-        <div className="text-xs font-mono text-muted-foreground">
-          {isClient ? currentTime : '00:00:00'}
-        </div>
+        <Button className="bg-accent text-xs font-mono  uppercase tracking-wide">
+          Account
+        </Button>
       </div>
     </nav>
   )

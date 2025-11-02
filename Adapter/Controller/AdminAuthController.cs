@@ -147,8 +147,7 @@ public class AdminAuthController : BaseApiController
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Logout()
     {
-        var result = await _bus.InvokeAsync<ApiResult>(
-            new LogoutAdminCommand());
+        var result = await _bus.InvokeAsync<ApiResult>(new LogoutAdminCommand());
 
         return FromApiResult(result);
     }
