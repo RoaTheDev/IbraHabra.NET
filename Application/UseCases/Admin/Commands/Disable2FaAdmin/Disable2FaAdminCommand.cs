@@ -35,19 +35,16 @@ public class Disable2FaAdminHandler : IWolverineHandler
         if (!passwordValid)
             return ApiResult<Disable2FaAdminResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
 
-        // Check if 2FA is enabled
         var isTwoFactorEnabled = await userManager.GetTwoFactorEnabledAsync(user);
         if (!isTwoFactorEnabled)
             return ApiResult<Disable2FaAdminResponse>.Fail(ApiErrors.User.CannotDisableTwoFactor());
 
-        // Disable 2FA
         var disable2FaResult = await userManager.SetTwoFactorEnabledAsync(user, false);
         if (!disable2FaResult.Succeeded)
         {
             return ApiResult<Disable2FaAdminResponse>.Fail(ApiErrors.User.FailToDisableTwoFactor());
         }
 
-        // Reset the authenticator key
         await userManager.ResetAuthenticatorKeyAsync(user);
 
         return ApiResult<Disable2FaAdminResponse>.Ok(new Disable2FaAdminResponse(

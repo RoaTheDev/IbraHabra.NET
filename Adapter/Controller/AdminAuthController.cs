@@ -98,6 +98,23 @@ public class AdminAuthController : BaseApiController
         return FromApiResult(result);
     }
 
+    [HttpPost("2fa/recovery")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Recovery2Fa([FromBody] VerifyRecoveryCodeAdminCommand command)
+    {
+        var result = await _bus.InvokeAsync<ApiResult<VerifyRecoveryCodeAdminResponse>>(command);
+        return FromApiResult(result);
+    }
+
+    [HttpPost("2fa/regenerate-recovery-codes")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RegenerateRecovery2Fa([FromBody] RegenerateRecoveryCodesAdminRequest request)
+    {
+        var command = new RegenerateRecoveryCodesAdminCommand(request.Password, HttpContext);
+        var result = await _bus.InvokeAsync<ApiResult<VerifyRecoveryCodeAdminResponse>>(command);
+        return FromApiResult(result);
+    }
+
     /// <summary>
     /// Refresh admin JWT token
     /// </summary>

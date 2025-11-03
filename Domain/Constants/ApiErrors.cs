@@ -35,7 +35,11 @@ public static class ApiErrors
             $"Disable Two Factor failed due to {msg}",
             ErrorType.Conflict
         );
-        
+        public static ApiError Regenerate2FaRecoveryCode() => new(
+            "2FA_NOT_ENABLED",
+            $"Cannot regenerate 2fa recovery code because 2fa is not enabled ",
+            ErrorType.BusinessRule
+        );
         
         public static ApiError FailToEnable2Fa(string msg) => new(
             "ENABLE_2FA_FAILED",
@@ -105,7 +109,11 @@ public static class ApiErrors
             "Two-factor code does not exist or is incorrect.",
             ErrorType.BusinessRule
         );
-
+        public static ApiError InvalidRecoveryCode() => new(
+            "RECOVERY_CODE_DOES_NOT_EXIST",
+            "Two-factor recovery code does not exist or is incorrect.",
+            ErrorType.BusinessRule
+        );
         
         public static ApiError CannotDisableTwoFactor() => new(
             "CANNOT_DISABLE_TWO_FACTOR_DOES_NOT_EXIST",

@@ -33,22 +33,43 @@ export type RefreshTokenResponse = {
 }
 
 export type Verify2FaAdminRequest = {
-  twoFactorCode: string
+  session2Fa: string
   code: string
 }
+export type VerifyRecovery2FaAdminRequest = {
+  session2Fa: string
+  recoveryCode: string
+}
+
 export type Verify2FaAdminResponse = {
   userId: string
   email: string
   token: string
   expiresAt: string
 }
+export type VerifyRecovery2FaAdminResponse = {
+  userId: string
+  email: string
+  token: string
+  expiresAt: string
+   remainingRecoveryCodes : number
+}
+export interface RegenerateRecoveryCodesAdminRequest {
+  password: string
+}
+
+export interface RegenerateRecoveryCodesAdminResponse {
+  recoveryCodes: string[]
+  message: string
+}
+
 export type Enable2FaAdminResponse = {
   sharedKey: string
   authenticatorUri: string
   recoveryCodes: string[]
 }
 export type Disable2FaAdminRequest = {
-  code: string
+  password :string
 }
 export type Disable2FaAdminResponse = {
   success: boolean
@@ -73,6 +94,7 @@ export type AdminUserInfoResponse = {
   twoFactorEnabled: boolean
   createdAt: Date
 }
+
 
 export type VerifyAdminUserResponse = {
    valid: boolean

@@ -15,7 +15,7 @@ import {
 import { Shield } from 'lucide-react'
 import { TwoFactorSkeleton } from '@/features/admin/auth/components/TwoFactorSkeleton.tsx'
 
-export const Route = createFileRoute('/auth/2fa')({
+export const Route = createFileRoute('/auth/2fa/')({
   component: TwoFactorPage,
   pendingComponent: TwoFactorSkeleton,
   ssr: false,
@@ -44,7 +44,7 @@ function TwoFactorPage() {
     },
     onSubmit: async ({ value }) => {
       verify2fa(
-        { twoFactorCode: sessionCode!, code: value.code },
+        { session2Fa: sessionCode!, code: value.code },
         {
           onSuccess: () => {
             navigate({ to: '/' })
@@ -139,4 +139,3 @@ function TwoFactorPage() {
     </div>
   )
 }
-

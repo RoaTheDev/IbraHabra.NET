@@ -26,13 +26,13 @@ public static class AppDbContextSeeder
         }
 
         // --- Super User ---
-        await EnsureUserAsync(userManager, "superuser", "super@inbrahabra.io", "Super!123", "Super", "User", "Super");
+        await EnsureUserAsync(userManager, "superuser", "super@ibrahabra.io", "Super!123", "Super", "User", "Super");
 
         // --- Admin User ---
-        await EnsureUserAsync(userManager, "adminuser", "admin@inbrahabra.io", "Admin!123", "Admin", "User", "Admin", "User");
+        await EnsureUserAsync(userManager, "adminuser", "admin@ibrahabra.io", "Admin!123", "Admin", "User", "Admin", "User");
 
         // --- Normal User ---
-        await EnsureUserAsync(userManager, "normaluser", "user@inbrahabra.io", "User!123", "Normal", "User", "User");
+        await EnsureUserAsync(userManager, "normaluser", "user@ibrahabra.io", "User!123", "Normal", "User", "User");
     }
 
     private static async Task EnsureUserAsync(

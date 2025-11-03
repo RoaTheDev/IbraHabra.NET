@@ -15,7 +15,7 @@
     /* Primary - Cyber Blue */
     --color-primary: oklch(0.58 0.18 230);
     --color-primary-foreground: oklch(0.98 0.01 250);
-
+    --color-primary-hover: oklch(0.68 0.18 230);
     /* Secondary - Steel Gray */
     --color-secondary: oklch(0.35 0.02 240);
     --color-secondary-foreground: oklch(0.98 0.01 250);
@@ -26,6 +26,7 @@
     /* Accent - Bright Cyan */
     --color-accent: oklch(0.75 0.15 195);
     --color-accent-foreground: oklch(0.15 0.02 250);
+
 
     /* Destructive - Alert Red */
     --color-destructive: oklch(0.55 0.22 25);

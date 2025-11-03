@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/features/admin/auth/adminAuthApi.ts'
 import {
   adminAuthStore,
@@ -14,8 +14,12 @@ import {
   Enable2FaAdminResponse,
   LoginRequest,
   LoginResponse,
+  RegenerateRecoveryCodesAdminRequest,
+  RegenerateRecoveryCodesAdminResponse,
   Verify2FaAdminRequest,
   Verify2FaAdminResponse,
+  VerifyRecovery2FaAdminRequest,
+  VerifyRecovery2FaAdminResponse,
 } from '@/features/admin/auth/adminAuthTypes.ts'
 import { ApiResponse } from '@/types/ApiResponse.ts'
 import { AxiosError } from 'axios'
@@ -28,11 +32,14 @@ const AdminAuthQueryKeys = {
   twoFactor: {
     base: () => [...AdminAuthQueryKeys.base, '2fa'] as const,
     status: () => [...AdminAuthQueryKeys.twoFactor.base(), 'status'] as const,
+    recovery: () =>
+      [...AdminAuthQueryKeys.twoFactor.base(), 'recovery'] as const,
     verify: () => [...AdminAuthQueryKeys.twoFactor.base(), 'verify'] as const,
     enable: () => [...AdminAuthQueryKeys.twoFactor.base(), 'enable'] as const,
     disable: () => [...AdminAuthQueryKeys.twoFactor.base(), 'disable'] as const,
   },
 }
+
 export const useLogin = () =>
   useMutation<
     ApiResponse<LoginResponse>,
@@ -80,6 +87,27 @@ export const useVerify2Fa = () =>
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })
 
+export const useVerifyRecoveryCode = () =>
+  useMutation<
+    ApiResponse<VerifyRecovery2FaAdminResponse>,
+    AxiosError<ApiResponse<null>>,
+    VerifyRecovery2FaAdminRequest
+  >({
+    mutationKey: AdminAuthQueryKeys.twoFactor.recovery(),
+    mutationFn: authApi.recovery2fa,
+    onMutate: () => adminAuthStoreAction.setLoading(true),
+    onSuccess: (response) => {
+      const { data } = response
+      const userData: AdminUser = {
+        userId: data.userId,
+        email: data.email,
+        requiresTwoFactor: true,
+      }
+      adminAuthStoreAction.setAuth(userData, data.token, data.expiresAt, null)
+    },
+    onSettled: () => adminAuthStoreAction.setLoading(false),
+  })
+
 export const useEnable2Fa = () =>
   useMutation<
     ApiResponse<Enable2FaAdminResponse>,
@@ -90,16 +118,40 @@ export const useEnable2Fa = () =>
     onMutate: () => adminAuthStoreAction.setLoading(true),
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })
-export const useConfirm2Fa = () =>
-  useMutation<
+
+export const useConfirm2Fa = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation<
     ApiResponse<ConfirmEnable2FaAdminResponse>,
     AxiosError<ApiResponse<null>>,
-    ConfirmEnable2FaAdminRequest
+    ConfirmEnable2FaAdminRequest,
+    { previousUserInfo: AdminUserInfoResponse | undefined }
   >({
     mutationKey: AdminAuthQueryKeys.twoFactor.enable(),
     mutationFn: authApi.confirm2fa,
-    onMutate: () => adminAuthStoreAction.setLoading(true),
-    onSuccess: () => {
+    onMutate: async () => {
+      adminAuthStoreAction.setLoading(true)
+
+      await queryClient.cancelQueries({ queryKey: AdminAuthQueryKeys.me() })
+
+      const previousUserInfo = queryClient.getQueryData<AdminUserInfoResponse>(
+        AdminAuthQueryKeys.me(),
+      )
+
+      if (previousUserInfo) {
+        queryClient.setQueryData<AdminUserInfoResponse>(
+          AdminAuthQueryKeys.me(),
+          {
+            ...previousUserInfo,
+            twoFactorEnabled: true,
+          },
+        )
+      }
+
+      return { previousUserInfo }
+    },
+    onSuccess: async () => {
       const { user, token, expiresAt, sessionCode2Fa } = adminAuthStore.state
 
       if (!user || !token || !expiresAt) return
@@ -115,19 +167,55 @@ export const useConfirm2Fa = () =>
         expiresAt,
         sessionCode2Fa ?? null,
       )
-    },
-    onSettled: () => adminAuthStoreAction.setLoading(false),
-  })
 
-export const useDisable2Fa = () =>
-  useMutation<
+      await queryClient.invalidateQueries({ queryKey: AdminAuthQueryKeys.me() })
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousUserInfo) {
+        queryClient.setQueryData(
+          AdminAuthQueryKeys.me(),
+          context.previousUserInfo,
+        )
+      }
+    },
+    onSettled: () => {
+      adminAuthStoreAction.setLoading(false)
+    },
+  })
+}
+
+export const useDisable2Fa = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation<
     ApiResponse<Disable2FaAdminResponse>,
     AxiosError<ApiResponse<null>>,
-    Disable2FaAdminRequest
+    Disable2FaAdminRequest,
+    { previousUserInfo: AdminUserInfoResponse | undefined }
   >({
     mutationKey: AdminAuthQueryKeys.twoFactor.disable(),
     mutationFn: authApi.disable2fa,
-    onSuccess: () => {
+    onMutate: async () => {
+      adminAuthStoreAction.setLoading(true)
+
+      await queryClient.cancelQueries({ queryKey: AdminAuthQueryKeys.me() })
+
+      const previousUserInfo = queryClient.getQueryData<AdminUserInfoResponse>(
+        AdminAuthQueryKeys.me(),
+      )
+
+      if (previousUserInfo) {
+        queryClient.setQueryData<AdminUserInfoResponse>(
+          AdminAuthQueryKeys.me(),
+          {
+            ...previousUserInfo,
+            twoFactorEnabled: false,
+          },
+        )
+      }
+      return { previousUserInfo }
+    },
+    onSuccess: async () => {
       const { user, token, expiresAt, sessionCode2Fa } = adminAuthStore.state
 
       if (!user || !token || !expiresAt) return
@@ -143,11 +231,36 @@ export const useDisable2Fa = () =>
         expiresAt,
         sessionCode2Fa ?? null,
       )
-    },
-    onMutate: () => adminAuthStoreAction.setLoading(true),
-    onSettled: () => adminAuthStoreAction.setLoading(false),
-  })
 
+      await queryClient.invalidateQueries({ queryKey: AdminAuthQueryKeys.me() })
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousUserInfo) {
+        queryClient.setQueryData(
+          AdminAuthQueryKeys.me(),
+          context.previousUserInfo,
+        )
+      }
+    },
+    onSettled: () => {
+      adminAuthStoreAction.setLoading(false)
+    },
+  })
+}
+export const useRegenerateRecoveryCodes = () => {
+  return useMutation<
+    ApiResponse<RegenerateRecoveryCodesAdminResponse>,
+    AxiosError<ApiResponse<null>>,
+    RegenerateRecoveryCodesAdminRequest
+  >({
+    mutationKey: [...AdminAuthQueryKeys.twoFactor.base(), 'regenerate'],
+    mutationFn: authApi.regenerateRecoveryCodes,
+    onMutate: () => adminAuthStoreAction.setLoading(true),
+    onSettled: () => {
+      adminAuthStoreAction.setLoading(false)
+    },
+  })
+}
 export const useAuthUser = () =>
   useQuery<AdminUserInfoResponse, AxiosError<ApiResponse<null>>>({
     queryKey: AdminAuthQueryKeys.me(),

@@ -8,9 +8,13 @@ import {
   Enable2FaAdminResponse,
   LoginRequest,
   LoginResponse,
+  RegenerateRecoveryCodesAdminRequest,
+  RegenerateRecoveryCodesAdminResponse,
   Verify2FaAdminRequest,
   Verify2FaAdminResponse,
   VerifyAdminUserResponse,
+  VerifyRecovery2FaAdminRequest,
+  VerifyRecovery2FaAdminResponse,
 } from '@/features/admin/auth/adminAuthTypes.ts'
 import { ApiResponse } from '@/types/ApiResponse.ts'
 import { CreateUserRequest } from '@/features/admin/manageUser/adminManageType.ts'
@@ -25,8 +29,10 @@ const endpoint = {
   disable2fa: `${baseUrl}/2fa/disable`,
   confirm2fa: `${baseUrl}/2fa/enable/confirm`,
   verify2fa: `${baseUrl}/verify-2fa`,
+  recovery2fa: `${baseUrl}/2fa/recovery`,
   verify: `${baseUrl}/verify`,
   logout: `${baseUrl}/logout`,
+  regenerateRecoveryCodes: `${baseUrl}/regenerate-recovery-codes`,
 }
 
 export const authApi = {
@@ -59,4 +65,19 @@ export const authApi = {
   verify: (): Promise<ApiResponse<VerifyAdminUserResponse>> =>
     apiClient.get(endpoint.verify),
   logout: (): Promise<ApiResponse<string>> => apiClient.post(endpoint.logout),
+  recovery2fa: (
+    payload: VerifyRecovery2FaAdminRequest,
+  ): Promise<ApiResponse<VerifyRecovery2FaAdminResponse>> =>
+    apiClient.post<ApiResponse<VerifyRecovery2FaAdminResponse>>(
+      endpoint.recovery2fa,
+      payload,
+    ),
+  regenerateRecoveryCodes: async (
+    payload: RegenerateRecoveryCodesAdminRequest,
+  ) => {
+    return apiClient.post<ApiResponse<RegenerateRecoveryCodesAdminResponse>>(
+      endpoint.regenerateRecoveryCodes,
+      payload,
+    )
+  },
 }

@@ -13,13 +13,14 @@ import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as Auth2faRouteImport } from './routes/auth/2fa'
 import { Route as AuthenticatedUserRouteImport } from './routes/_authenticated/user'
 import { Route as AuthenticatedSysConfigRouteImport } from './routes/_authenticated/sys-config'
 import { Route as AuthenticatedRoleRouteImport } from './routes/_authenticated/role'
 import { Route as AuthenticatedProjectRouteImport } from './routes/_authenticated/project'
 import { Route as AuthenticatedClientRouteImport } from './routes/_authenticated/client'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
+import { Route as Auth2faIndexRouteImport } from './routes/auth/2fa/index'
+import { Route as Auth2faRecoveryRouteImport } from './routes/auth/2fa/recovery'
 
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/auth',
@@ -38,11 +39,6 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const Auth2faRoute = Auth2faRouteImport.update({
-  id: '/2fa',
-  path: '/2fa',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthenticatedUserRoute = AuthenticatedUserRouteImport.update({
@@ -75,6 +71,16 @@ const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const Auth2faIndexRoute = Auth2faIndexRouteImport.update({
+  id: '/2fa/',
+  path: '/2fa/',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const Auth2faRecoveryRoute = Auth2faRecoveryRouteImport.update({
+  id: '/2fa/recovery',
+  path: '/2fa/recovery',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteRouteWithChildren
@@ -84,9 +90,10 @@ export interface FileRoutesByFullPath {
   '/role': typeof AuthenticatedRoleRoute
   '/sys-config': typeof AuthenticatedSysConfigRoute
   '/user': typeof AuthenticatedUserRoute
-  '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
   '/': typeof AuthenticatedIndexRoute
+  '/auth/2fa/recovery': typeof Auth2faRecoveryRoute
+  '/auth/2fa': typeof Auth2faIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
@@ -96,9 +103,10 @@ export interface FileRoutesByTo {
   '/role': typeof AuthenticatedRoleRoute
   '/sys-config': typeof AuthenticatedSysConfigRoute
   '/user': typeof AuthenticatedUserRoute
-  '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
   '/': typeof AuthenticatedIndexRoute
+  '/auth/2fa/recovery': typeof Auth2faRecoveryRoute
+  '/auth/2fa': typeof Auth2faIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -110,9 +118,10 @@ export interface FileRoutesById {
   '/_authenticated/role': typeof AuthenticatedRoleRoute
   '/_authenticated/sys-config': typeof AuthenticatedSysConfigRoute
   '/_authenticated/user': typeof AuthenticatedUserRoute
-  '/auth/2fa': typeof Auth2faRoute
   '/auth/login': typeof AuthLoginRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/auth/2fa/recovery': typeof Auth2faRecoveryRoute
+  '/auth/2fa/': typeof Auth2faIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -124,9 +133,10 @@ export interface FileRouteTypes {
     | '/role'
     | '/sys-config'
     | '/user'
-    | '/auth/2fa'
     | '/auth/login'
     | '/'
+    | '/auth/2fa/recovery'
+    | '/auth/2fa'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -136,9 +146,10 @@ export interface FileRouteTypes {
     | '/role'
     | '/sys-config'
     | '/user'
-    | '/auth/2fa'
     | '/auth/login'
     | '/'
+    | '/auth/2fa/recovery'
+    | '/auth/2fa'
   id:
     | '__root__'
     | '/_authenticated'
@@ -149,9 +160,10 @@ export interface FileRouteTypes {
     | '/_authenticated/role'
     | '/_authenticated/sys-config'
     | '/_authenticated/user'
-    | '/auth/2fa'
     | '/auth/login'
     | '/_authenticated/'
+    | '/auth/2fa/recovery'
+    | '/auth/2fa/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -187,13 +199,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRouteRoute
-    }
-    '/auth/2fa': {
-      id: '/auth/2fa'
-      path: '/2fa'
-      fullPath: '/auth/2fa'
-      preLoaderRoute: typeof Auth2faRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/_authenticated/user': {
@@ -238,6 +243,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/auth/2fa/': {
+      id: '/auth/2fa/'
+      path: '/2fa'
+      fullPath: '/auth/2fa'
+      preLoaderRoute: typeof Auth2faIndexRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/auth/2fa/recovery': {
+      id: '/auth/2fa/recovery'
+      path: '/2fa/recovery'
+      fullPath: '/auth/2fa/recovery'
+      preLoaderRoute: typeof Auth2faRecoveryRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
   }
 }
 
@@ -265,13 +284,15 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface AuthRouteRouteChildren {
-  Auth2faRoute: typeof Auth2faRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  Auth2faRecoveryRoute: typeof Auth2faRecoveryRoute
+  Auth2faIndexRoute: typeof Auth2faIndexRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
-  Auth2faRoute: Auth2faRoute,
   AuthLoginRoute: AuthLoginRoute,
+  Auth2faRecoveryRoute: Auth2faRecoveryRoute,
+  Auth2faIndexRoute: Auth2faIndexRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(

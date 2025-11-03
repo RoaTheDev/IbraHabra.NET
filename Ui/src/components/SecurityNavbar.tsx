@@ -2,12 +2,14 @@ import { Activity, Menu, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { adminAuthStore } from '@/stores/adminAuthStore.ts'
 
 interface SecurityNavbarProps {
   onMenuClick: () => void
 }
 
 export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
+  const email = adminAuthStore.state.user?.email
   const [currentTime, setCurrentTime] = useState<string>('')
   const [isClient, setIsClient] = useState(false)
   useEffect(() => setIsClient(true), [])
@@ -40,7 +42,7 @@ export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
         </div>
         <div>
           <h1 className="text-lg font-bold text-foreground tracking-wide">
-            SENTINEL IAM
+            IBRAHABRA.NET
           </h1>
           <p className="text-[10px] text-security-cyan uppercase tracking-wider">
             Security Operations Center
@@ -59,6 +61,9 @@ export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
               {isClient && <span>{currentTime}</span>}
             </div>
           </div>
+        </div>
+        <div>
+            <span><i>{email}</i></span>
         </div>
         <Button className="bg-accent text-xs font-mono  uppercase tracking-wide">
           <Link to={'/account'}>Account</Link>
