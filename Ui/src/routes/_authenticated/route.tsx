@@ -11,17 +11,41 @@ import { authApi } from '@/features/admin/auth/adminAuthApi.ts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, ShieldCheck } from 'lucide-react'
 import { SidebarContext } from '@/stores/SidebarContext'
-import { cacheKeys } from '@/constants/cacheKeys.ts'
+import { clientCacheKeys } from '@/constants/clientCacheKeys.ts'
+import { sessionUtils } from '@/lib/sessionUtils.ts'
+import { AxiosError } from 'axios'
 
+let lastVerifyAttempt = 0
+let consecutiveFailures = 0
+const BASE_COOLDOWN = 10_000
+const MAX_COOLDOWN = 5 * 60 * 1000
 const VERIFY_INTERVAL = 1000 * 60 * 15
+
+const getBackoffDelay = () => {
+  if (consecutiveFailures === 0) return BASE_COOLDOWN
+  return Math.min(
+    BASE_COOLDOWN * Math.pow(2, consecutiveFailures),
+    MAX_COOLDOWN,
+  )
+}
+
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
   staleTime: Infinity,
   ssr: false,
   pendingComponent: AuthLoadingSkeleton,
-  beforeLoad: async () => {
-    adminAuthStoreAction.rehydrate()
 
+  beforeLoad: async () => {
+    const now = Date.now()
+    const backoffDelay = getBackoffDelay()
+
+    if (now - lastVerifyAttempt < backoffDelay) {
+      return
+    }
+
+    lastVerifyAttempt = now
+
+    adminAuthStoreAction.rehydrate()
     const { token, sessionCode2Fa } = adminAuthStore.state
 
     if (!token) {
@@ -33,24 +57,41 @@ export const Route = createFileRoute('/_authenticated')({
     }
 
     if (typeof window !== 'undefined') {
-      const lastVerified = sessionStorage.getItem(
-        cacheKeys.last_verified_session,
+      const lastVerified = sessionUtils.get<string>(
+        clientCacheKeys.last_verified_session,
       )
-      const now = Date.now()
-
       const shouldVerify =
         !lastVerified || now - parseInt(lastVerified) > VERIFY_INTERVAL
 
       if (shouldVerify) {
         try {
           await authApi.verify()
-          sessionStorage.setItem(
-            cacheKeys.last_verified_session,
+          sessionUtils.set(
+            clientCacheKeys.last_verified_session,
             now.toString(),
           )
-        } catch (error) {
-          sessionStorage.removeItem(cacheKeys.last_verified_session)
-          throw redirect({ to: '/auth/login' })
+          consecutiveFailures = 0
+        } catch (error: unknown) {
+          if (error instanceof AxiosError) {
+            const isAuthError = error.response?.status === 401
+
+            if (isAuthError) {
+              console.error('Authentication failed - token invalid')
+              sessionUtils.remove(clientCacheKeys.last_verified_session)
+              adminAuthStoreAction.reset()
+              consecutiveFailures = 0
+              throw redirect({ to: '/auth/login' })
+            } else {
+              consecutiveFailures++
+              console.warn(
+                `Token verification failed (attempt ${consecutiveFailures}), backing off for ${backoffDelay}ms:`,
+                error.message,
+              )
+            }
+          } else {
+            consecutiveFailures++
+            console.warn('Unexpected error during  verification:', error)
+          }
         }
       }
     }

@@ -1,5 +1,5 @@
 import { Shield } from 'lucide-react'
-import { Skeleton } from '../ui/skeleton.tsx'
+import { Skeleton } from '../../../../components/ui/skeleton.tsx'
 
 export function LoginSkeleton() {
   return (

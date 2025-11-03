@@ -26,9 +26,7 @@ export type LoginResponse = {
   session2Fa: string | null
 }
 
-export type RefreshTokenRequest = {
-  token: string
-}
+
 export type RefreshTokenResponse = {
   token: string
   expiredAt: string

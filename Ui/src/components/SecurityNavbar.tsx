@@ -1,6 +1,7 @@
 import { Activity, Menu, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 
 interface SecurityNavbarProps {
   onMenuClick: () => void
@@ -60,7 +61,7 @@ export const SecurityNavbar = ({ onMenuClick }: SecurityNavbarProps) => {
           </div>
         </div>
         <Button className="bg-accent text-xs font-mono  uppercase tracking-wide">
-          Account
+          <Link to={'/account'}>Account</Link>
         </Button>
       </div>
     </nav>

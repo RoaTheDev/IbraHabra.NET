@@ -13,7 +13,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp.tsx'
 import { Shield } from 'lucide-react'
-import { TwoFactorSkeleton } from '@/components/skeletons/TwoFactorSkeleton.tsx'
+import { TwoFactorSkeleton } from '@/features/admin/auth/components/TwoFactorSkeleton.tsx'
 
 export const Route = createFileRoute('/auth/2fa')({
   component: TwoFactorPage,

@@ -66,6 +66,23 @@ class ApiClient {
   }
 
   private setupInterceptors(): void {
+    let isRefreshing = false
+    let failedQueue: Array<{
+      resolve: (value?: any) => void
+      reject: (reason?: any) => void
+    }> = []
+
+    const processQueue = (error: any, token: string | null = null) => {
+      failedQueue.forEach((prom) => {
+        if (error) {
+          prom.reject(error)
+        } else {
+          prom.resolve(token)
+        }
+      })
+      failedQueue = []
+    }
+
     this.client.interceptors.request.use((config) => {
       const token = adminAuthStore.state.token
       if (token && config.headers) {
@@ -79,53 +96,73 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config
 
-        const isRefreshEndpoint = originalRequest.url?.includes(
-          '/refresh',
-        )
-
-
         if (
-          error.response?.status === 401 &&
-          !originalRequest._retry &&
-          !isRefreshEndpoint
+          originalRequest.url?.includes('/refresh') ||
+          originalRequest._retry
         ) {
-          originalRequest._retry = true
-
-          try {
-            const jwtToken = adminAuthStore.state.token
-            if (!jwtToken) throw new Error('Cannot refresh')
-
-            const response = await this.client.post<
-              ApiResponse<RefreshTokenResponse>
-            >(
-              '/admin/auth/refresh',
-              {})
-
-            const { token, expiredAt } = response.data.data
-
-            adminAuthStoreAction.setAuth(
-              adminAuthStore.state.user!,
-              token,
-              expiredAt,
-            )
-
-            originalRequest.headers['Authorization'] = `Bearer ${token}`
-            return this.client(originalRequest)
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError)
+          if (error.response?.status === 401) {
             adminAuthStoreAction.reset()
             window.location.href = '/auth/login'
-            return Promise.reject(refreshError)
           }
+          return Promise.reject(error)
         }
 
-        if (isRefreshEndpoint && error.response?.status === 401) {
-          console.error('Refresh token invalid or expired')
+        if (error.response?.status !== 401) {
+          return Promise.reject(error)
+        }
+
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject })
+          })
+            .then((token) => {
+              originalRequest.headers['Authorization'] = `Bearer ${token}`
+              return this.client(originalRequest)
+            })
+            .catch((err) => Promise.reject(err))
+        }
+
+        originalRequest._retry = true
+        isRefreshing = true
+
+        try {
+          const jwtToken = adminAuthStore.state.token
+          if (!jwtToken) throw new Error('No token available')
+
+          const response = await this.client.post<
+            ApiResponse<RefreshTokenResponse>
+          >(
+            '/admin/auth/refresh',
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${jwtToken}`,
+                'Content-Type': 'application/json',
+              },
+            },
+          )
+
+          const { token, expiredAt } = response.data.data
+
+          adminAuthStoreAction.setAuth(
+            adminAuthStore.state.user!,
+            token,
+            expiredAt,
+            adminAuthStore.state.sessionCode2Fa ?? null,
+          )
+
+          originalRequest.headers['Authorization'] = `Bearer ${token}`
+          processQueue(null, token)
+
+          return this.client(originalRequest)
+        } catch (refreshError) {
+          processQueue(refreshError, null)
           adminAuthStoreAction.reset()
           window.location.href = '/auth/login'
+          return Promise.reject(refreshError)
+        } finally {
+          isRefreshing = false
         }
-
-        return Promise.reject(error)
       },
     )
   }

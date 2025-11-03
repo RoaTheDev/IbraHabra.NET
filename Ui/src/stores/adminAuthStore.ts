@@ -1,5 +1,5 @@
 import { Store } from '@tanstack/store'
-import { cacheKeys } from '@/constants/cacheKeys.ts'
+import { clientCacheKeys } from '@/constants/clientCacheKeys.ts'
 import { cookieUtils } from '@/lib/cookieStorageUtils.ts'
 
 export type AdminUser = {
@@ -43,7 +43,7 @@ adminAuthStore.subscribe((value) => {
     prevVal.sessionCode2Fa !== currentVal.sessionCode2Fa
   ) {
     const { loading, ...persisted } = currentVal
-    cookieUtils.set(cacheKeys.auth, JSON.stringify(persisted))
+    cookieUtils.set(clientCacheKeys.auth, JSON.stringify(persisted))
   }
 })
 
@@ -51,13 +51,18 @@ export const adminAuthStoreAction = {
   setLoading: (loading: boolean) =>
     adminAuthStore.setState((prev) => ({ ...prev, loading })),
 
-  setAuth: (user: AdminUser, token: string, expiresAt: string) =>
+  setAuth: (
+    user: AdminUser,
+    token: string,
+    expiresAt: string,
+    sessionCode2Fa: string | null,
+  ) =>
     adminAuthStore.setState((prev) => ({
       ...prev,
       user,
       token,
       expiresAt,
-      sessionCode2Fa: null,
+      sessionCode2Fa: sessionCode2Fa || null,
     })),
   setToken: (token: string) =>
     adminAuthStore.setState((prev) => ({ ...prev, token: token })),
@@ -75,14 +80,14 @@ export const adminAuthStoreAction = {
     }),
 
   rehydrate: () => {
-    const saved = cookieUtils.get(cacheKeys.auth)
+    const saved = cookieUtils.get(clientCacheKeys.auth)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
         isRehydrating = true
         adminAuthStore.setState({ ...parsed, loading: false })
       } catch {
-        cookieUtils.remove(cacheKeys.auth)
+        cookieUtils.remove(clientCacheKeys.auth)
       } finally {
         isRehydrating = false
       }

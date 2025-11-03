@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { adminAuthStore } from '@/stores/adminAuthStore.ts'
-import { LoginSkeleton } from '@/components/skeletons/LoginSkeleton.tsx'
+import { LoginSkeleton } from '@/features/admin/auth/components/LoginSkeleton.tsx'
 
 export const Route = createFileRoute('/auth/login')({
   component: Login,
