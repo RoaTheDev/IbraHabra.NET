@@ -24,34 +24,54 @@ public class VerifyRecoveryCodeAdminHandler : IWolverineHandler
     public static async Task<ApiResult<VerifyRecoveryCodeAdminResponse>> Handle(
         VerifyRecoveryCodeAdminCommand command,
         UserManager<User> userManager,
-        SignInManager<User> signInManager,
         ICacheService cache,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
         IRefreshTokenService refreshTokenService)
     {
         var cachedEmail = await cache.GetAsync<string>($"2fa:{command.Session2Fa}");
-        await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+
         if (cachedEmail == null)
             return ApiResult<VerifyRecoveryCodeAdminResponse>.Fail(
                 ApiErrors.Authentication.InvalidSession());
 
         var user = await userManager.FindByEmailAsync(cachedEmail);
         if (user == null)
+        {
+            await cache.RemoveAsync($"2fa:{command.Session2Fa}");
             return ApiResult<VerifyRecoveryCodeAdminResponse>.Fail(
                 ApiErrors.User.NotFound());
+        }
 
         var roles = await userManager.GetRolesAsync(user);
         if (!roles.Contains("Admin") && !roles.Contains("SuperAdmin"))
+        {
+            await cache.RemoveAsync($"2fa:{command.Session2Fa}");
             return ApiResult<VerifyRecoveryCodeAdminResponse>.Fail(
                 ApiErrors.Authorization.InsufficientPermissions());
+        }
 
         var result = await userManager.RedeemTwoFactorRecoveryCodeAsync(user, command.RecoveryCode);
         if (!result.Succeeded)
+        {
+            await userManager.AccessFailedAsync(user);
+
+            if (await userManager.IsLockedOutAsync(user))
+            {
+                await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+                var lockoutEnd = await userManager.GetLockoutEndDateAsync(user);
+                var remainingMinutes = (lockoutEnd - DateTimeOffset.UtcNow)?.TotalMinutes ?? 0;
+                return ApiResult<VerifyRecoveryCodeAdminResponse>.Fail(
+                    ApiErrors.User.AccountLocked(Convert.ToInt32(remainingMinutes)));
+            }
+
             return ApiResult<VerifyRecoveryCodeAdminResponse>.Fail(
                 ApiErrors.User.InvalidTwoFactorCode());
+        }
 
-        await signInManager.SignInAsync(user, isPersistent: false);
+        await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+
+        await userManager.ResetAccessFailedCountAsync(user);
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
         var expiresAt = DateTime.UtcNow.AddHours(8);

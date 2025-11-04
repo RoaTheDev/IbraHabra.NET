@@ -23,7 +23,6 @@ public class Verify2FaAdminHandler : IWolverineHandler
     public static async Task<ApiResult<Verify2FaAdminCommandResponse>> Handle(
         Verify2FaAdminCommand command,
         UserManager<User> userManager,
-        SignInManager<User> signInManager,
         ICacheService cache,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
@@ -39,7 +38,7 @@ public class Verify2FaAdminHandler : IWolverineHandler
             return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.User.NotFound());
 
         var roles = await userManager.GetRolesAsync(user);
-        if (!roles.Contains("Admin") && !roles.Contains("SuperAdmin"))
+        if (!roles.Contains("Admin") && !roles.Contains("Super"))
             return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
 
         var isValid = await userManager.VerifyTwoFactorTokenAsync(
@@ -48,9 +47,23 @@ public class Verify2FaAdminHandler : IWolverineHandler
             command.Code);
 
         if (!isValid)
-            return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
+        {
+            await userManager.AccessFailedAsync(user);
 
-        await signInManager.SignInAsync(user, isPersistent: false);
+            if (await userManager.IsLockedOutAsync(user))
+            {
+                await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+                var lockoutEnd = await userManager.GetLockoutEndDateAsync(user);
+                var remainingMinutes = (lockoutEnd - DateTimeOffset.UtcNow)?.TotalMinutes ?? 0;
+                return ApiResult<Verify2FaAdminCommandResponse>.Fail(
+                    ApiErrors.User.AccountLocked(Convert.ToInt32(remainingMinutes)));
+            }
+
+            return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
+        }
+
+        await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+        await userManager.ResetAccessFailedCountAsync(user);
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
         var expiresAt = DateTime.UtcNow.AddHours(8);

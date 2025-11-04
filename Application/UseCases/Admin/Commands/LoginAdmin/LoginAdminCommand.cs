@@ -22,10 +22,10 @@ public record LoginAdminCommandResponse(
 
 public class LoginAdminHandler : IWolverineHandler
 {
+// Option 1: Don't use SignInManager at all (BEST for pure JWT APIs)
     public static async Task<ApiResult<LoginAdminCommandResponse>> Handle(
         LoginAdminCommand command,
         UserManager<User> userManager,
-        SignInManager<User> signInManager,
         ICacheService cache,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
@@ -37,24 +37,27 @@ public class LoginAdminHandler : IWolverineHandler
             return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.User.NotFound());
 
         var roles = await userManager.GetRolesAsync(user);
-        Console.WriteLine(string.Join(", ", roles));
         if (!roles.Contains("Admin") && !roles.Contains("Super"))
             return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
 
-        var result = await signInManager.CheckPasswordSignInAsync(user, command.Password, true);
-        if (!result.Succeeded)
+        if (!await userManager.CheckPasswordAsync(user, command.Password))
         {
-            if (result.IsLockedOut)
+            await userManager.AccessFailedAsync(user);
+
+            if (await userManager.IsLockedOutAsync(user))
             {
-                var lockoutMinutes = userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes;
+                var lockoutEnd = await userManager.GetLockoutEndDateAsync(user);
+                var remainingMinutes = (lockoutEnd - DateTimeOffset.UtcNow)?.TotalMinutes ?? 0;
                 return ApiResult<LoginAdminCommandResponse>.Fail(
-                    ApiErrors.User.AccountLocked(Convert.ToInt32(lockoutMinutes)));
+                    ApiErrors.User.AccountLocked(Convert.ToInt32(remainingMinutes)));
             }
 
             return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
         }
 
-        if (result.RequiresTwoFactor)
+        await userManager.ResetAccessFailedCountAsync(user);
+
+        if (user.TwoFactorEnabled)
         {
             var session2Fa = Guid.NewGuid().ToString();
             await cache.SetAsync($"2fa:{session2Fa}", user.Email, TimeSpan.FromMinutes(5));
