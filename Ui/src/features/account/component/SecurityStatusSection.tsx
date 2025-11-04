@@ -25,7 +25,7 @@ export function SecurityStatusSection({ userInfo }: SecurityStatusSectionProps) 
   const { score, maxScore } = calculateSecurityScore()
   const percentage = (score / maxScore) * 100
 
-  // Determine security level
+
   const getSecurityLevel = () => {
     if (percentage >= 80) {
       return {

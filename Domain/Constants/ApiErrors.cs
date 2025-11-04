@@ -193,7 +193,11 @@ public static class ApiErrors
             "The verification code is invalid or has expired. Please try again.",
             ErrorType.Unauthorized
         );
-
+        public static ApiError InvalidSetup2Fa() => new(
+            "INVALID_TWO_FACTOR_CODE",
+            "The verification code is invalid or has expired. Please try again.",
+            ErrorType.Unauthorized
+        );
         public static ApiError SessionNotFound() => new(
             "SESSION_NOT_FOUND",
             "Session not found or has been terminated. Please sign in again.",

@@ -38,11 +38,10 @@ public class ConfirmEnable2FaAdminHandler : IWolverineHandler
 
         if (!is2FaTokenValid)
         {
-            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(ApiErrors.Authentication.InvalidTwoFactorCode());
+            return ApiResult<ConfirmEnable2FaAdminResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
         }
 
         await userManager.SetTwoFactorEnabledAsync(user, true);
-
         return ApiResult<ConfirmEnable2FaAdminResponse>.Ok(new ConfirmEnable2FaAdminResponse(
             Success: true,
             Message: "Two-factor authentication has been enabled successfully"));
