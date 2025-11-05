@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/apiClient.ts'
+import { apiClient, baseUrl } from '@/lib/apiClient.ts'
 import {
   AdminUserInfoResponse,
   ConfirmEnable2FaAdminRequest,
@@ -18,8 +18,6 @@ import {
 } from '@/features/admin/auth/adminAuthTypes.ts'
 import { ApiResponse } from '@/types/ApiResponse.ts'
 import { CreateUserRequest } from '@/features/admin/manageUser/adminManageType.ts'
-
-const baseUrl = '/admin/auth'
 
 const endpoint = {
   login: `${baseUrl}/login`,

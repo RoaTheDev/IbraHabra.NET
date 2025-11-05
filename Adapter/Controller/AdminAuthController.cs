@@ -44,7 +44,7 @@ public class AdminAuthController : BaseApiController
         return FromApiResult(result);
     }
 
-    [HttpPost("register")]
+    [HttpPost("create-user")]
     [ValidateModel<CreateUserCommand>]
     public async Task<IActionResult> Register([FromBody] CreateUserCommand command)
     {

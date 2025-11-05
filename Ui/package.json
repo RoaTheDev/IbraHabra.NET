@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
+    "scan": "vite & pnpm dlx react-scan@latest http://localhost:5173",
     "serve": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
@@ -46,6 +47,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "react-scan": "^0.4.3",
     "@tanstack/devtools-event-client": "^0.3.2",
     "@tanstack/eslint-config": "^0.3.0",
     "@testing-library/dom": "^10.4.0",

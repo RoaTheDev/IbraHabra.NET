@@ -122,7 +122,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(f => f.Id).ValueGeneratedOnAdd();
             e.Property(f => f.Name).HasMaxLength(50).IsRequired();
 
-            // Add unique constraint on permission name
             e.HasIndex(f => f.Name).IsUnique();
 
             e.ToTable("permissions", "realms");
@@ -135,13 +134,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             e.HasKey(pm => new { pm.ProjectId, pm.UserId });
 
-            // Ignore the computed Id property
             e.Ignore(pm => pm.Id);
 
-            // Explicitly configure the ProjectRoleId property before the relationship
             e.Property(pm => pm.ProjectRoleId).IsRequired();
 
-            // Relationships
             e.HasOne(pm => pm.Projects)
                 .WithMany(p => p.ProjectMembers)
                 .HasForeignKey(pm => pm.ProjectId)

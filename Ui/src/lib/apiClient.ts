@@ -171,3 +171,4 @@ class ApiClient {
 export const apiClient = new ApiClient({
   baseURL: `${import.meta.env.VITE_API_URL}/${import.meta.env.VITE_API_VERSION}/api`,
 })
+export const baseUrl = '/admin/auth'

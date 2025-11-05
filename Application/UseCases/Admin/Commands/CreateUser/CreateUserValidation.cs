@@ -78,11 +78,11 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
             .WithMessage("Role names cannot be empty")
             .Must(roles => roles == null || roles.Distinct().Count() == roles.Length)
             .WithMessage("Duplicate roles are not allowed")
-            .When(x => x.Roles != null && x.Roles.Length > 0);
+            .When(x => x.Roles.Length > 0);
 
         RuleForEach(x => x.Roles)
             .MaximumLength(50)
             .WithMessage("Role name must not exceed 50 characters")
-            .When(x => x.Roles != null && x.Roles.Length > 0);
+            .When(x => x.Roles.Length > 0);
     }
 }

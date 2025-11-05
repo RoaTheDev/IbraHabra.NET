@@ -37,8 +37,8 @@ public class JwtGen
             issuer: issuer,
             audience: audience,
             claims: claims,
-            // expires: DateTime.UtcNow.AddHours(1),
-            expires: DateTime.UtcNow.AddSeconds(30),
+            expires: DateTime.UtcNow.AddHours(1),
+            // expires: DateTime.UtcNow.AddSeconds(30),
             signingCredentials: credentials
         );
 
