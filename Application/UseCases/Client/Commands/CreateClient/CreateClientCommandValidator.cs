@@ -1,67 +1,11 @@
 using FluentValidation;
-using IbraHabra.NET.Domain.Constants.Values;
+using IbraHabra.NET.Domain.Constants;
 using OpenIddict.Abstractions;
 
 namespace IbraHabra.NET.Application.UseCases.Client.Commands.CreateClient;
 
 public class CreateClientCommandValidator : AbstractValidator<CreateClientCommand>
 {
-    private static readonly string[] ValidApplicationTypes =
-    [
-        OpenIddictConstants.ApplicationTypes.Native,
-        OpenIddictConstants.ApplicationTypes.Web
-    ];
-
-    private static readonly string[] ValidClientTypes =
-    [
-        OpenIddictConstants.ClientTypes.Confidential,
-        OpenIddictConstants.ClientTypes.Public
-    ];
-
-    private static readonly string[] ValidConsentTypes =
-    [
-        OpenIddictConstants.ConsentTypes.Explicit,
-        OpenIddictConstants.ConsentTypes.External,
-        OpenIddictConstants.ConsentTypes.Implicit,
-        OpenIddictConstants.ConsentTypes.Systematic
-    ];
-
-    private static readonly string[] ValidPermissions =
-    [
-        // Endpoints
-        OpenIddictConstants.Permissions.Endpoints.Authorization,
-        OpenIddictConstants.Permissions.Endpoints.Token,
-        OpenIddictConstants.Permissions.Endpoints.EndSession,
-        OpenIddictConstants.Permissions.Endpoints.Introspection,
-        OpenIddictConstants.Permissions.Endpoints.Revocation,
-        OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization,
-        
-        // Grant Types
-        OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-        OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-        OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-        OpenIddictConstants.Permissions.GrantTypes.Implicit,
-        OpenIddictConstants.Permissions.GrantTypes.Password,
-        OpenIddictConstants.Permissions.GrantTypes.DeviceCode,
-        
-        // Response Types
-        OpenIddictConstants.Permissions.ResponseTypes.Code,
-        OpenIddictConstants.Permissions.ResponseTypes.Token,
-        OpenIddictConstants.Permissions.ResponseTypes.IdToken,
-        OpenIddictConstants.Permissions.ResponseTypes.CodeIdToken,
-        OpenIddictConstants.Permissions.ResponseTypes.CodeToken,
-        OpenIddictConstants.Permissions.ResponseTypes.IdTokenToken,
-        OpenIddictConstants.Permissions.ResponseTypes.CodeIdTokenToken,
-        OpenIddictConstants.Permissions.ResponseTypes.None,
-        
-        // Scopes
-        OpenIddictConstants.Permissions.Scopes.Address,
-        OpenIddictConstants.Permissions.Scopes.Email,
-        OpenIddictConstants.Permissions.Scopes.Phone,
-        OpenIddictConstants.Permissions.Scopes.Profile,
-        OpenIddictConstants.Permissions.Scopes.Roles
-    ];
-
     public CreateClientCommandValidator()
     {
         RuleFor(x => x.ProjectId)
@@ -75,18 +19,20 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
             .WithMessage("Display name must not exceed 200 characters.");
 
         RuleFor(x => x.ApplicationType)
-            .Must(type => string.IsNullOrEmpty(type) || ValidApplicationTypes.Contains(type))
-            .WithMessage($"Application type must be one of: {string.Join(", ", ValidApplicationTypes)}");
+            .Must(type => string.IsNullOrEmpty(type) || OauthConstantValidation.ValidApplicationTypes.Contains(type))
+            .WithMessage(
+                $"Application type must be one of: {string.Join(", ", OauthConstantValidation.ValidApplicationTypes)}");
 
         RuleFor(x => x.ClientType)
-            .Must(type => string.IsNullOrEmpty(type) || ValidClientTypes.Contains(type))
-            .WithMessage($"Client type must be one of: {string.Join(", ", ValidClientTypes)}")
+            .Must(type => string.IsNullOrEmpty(type) || OauthConstantValidation.ValidClientTypes.Contains(type))
+            .WithMessage($"Client type must be one of: {string.Join(", ", OauthConstantValidation.ValidClientTypes)}")
             .NotEmpty()
             .WithMessage("Client type is required.");
 
         RuleFor(x => x.ConsentType)
-            .Must(type => string.IsNullOrEmpty(type) || ValidConsentTypes.Contains(type))
-            .WithMessage($"Consent type must be one of: {string.Join(", ", ValidConsentTypes)}");
+            .Must(type => string.IsNullOrEmpty(type) || OauthConstantValidation.ValidConsentTypes.Contains(type))
+            .WithMessage(
+                $"Consent type must be one of: {string.Join(", ", OauthConstantValidation.ValidConsentTypes)}");
 
         // Client Secret validation
         RuleFor(x => x.ClientSecret)
@@ -137,15 +83,17 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
 
         // PKCE validation
         RuleFor(x => x.AuthPolicy)
-            .Must((command, policy) => ValidatePkceForPublicClients(command, policy))
+            .Must((command, policy) => ValidatePkceForPublicClients(command))
             .WithMessage("Public clients should require PKCE for security.")
             .When(x => x.ClientType == OpenIddictConstants.ClientTypes.Public);
 
         // Custom permission format validation
         RuleForEach(x => x.Permissions)
             .Must(IsValidCustomPermission)
-            .When(x => x.Permissions != null && x.Permissions.Any(p => !ValidPermissions.Contains(p)))
-            .WithMessage("Custom permissions must follow the format 'prefix:value' (e.g., 'aud:api1', 'scp:custom_scope').");
+            .When(x => x.Permissions != null &&
+                       x.Permissions.Any(p => !OauthConstantValidation.ValidPermissions.Contains(p)))
+            .WithMessage(
+                "Custom permissions must follow the format 'prefix:value' (e.g., 'aud:api1', 'scp:custom_scope').");
     }
 
     private static bool IsValidUri(string uri)
@@ -157,26 +105,18 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
     private static bool IsValidPermission(string permission)
     {
         // Check if it's a standard permission
-        if (ValidPermissions.Contains(permission))
+        if (OauthConstantValidation.ValidPermissions.Contains(permission))
             return true;
 
         // Check if it's a custom permission with valid prefix
-        var validPrefixes = new[]
-        {
-            OpenIddictConstants.Permissions.Prefixes.Audience,      // aud:
-            OpenIddictConstants.Permissions.Prefixes.Endpoint,      // ept:
-            OpenIddictConstants.Permissions.Prefixes.GrantType,     // gt:
-            OpenIddictConstants.Permissions.Prefixes.ResponseType,  // rst:
-            OpenIddictConstants.Permissions.Prefixes.Resource,      // rsrc:
-            OpenIddictConstants.Permissions.Prefixes.Scope          // scp:
-        };
+      
 
-        return validPrefixes.Any(prefix => permission.StartsWith(prefix) && permission.Length > prefix.Length);
+        return OauthConstantValidation.ValidPrefixes.Any(prefix => permission.StartsWith(prefix) && permission.Length > prefix.Length);
     }
 
     private static bool IsValidCustomPermission(string permission)
     {
-        if (ValidPermissions.Contains(permission))
+        if (OauthConstantValidation.ValidPermissions.Contains(permission))
             return true;
 
         // For custom permissions, check format
@@ -259,21 +199,12 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
         return true;
     }
 
-    private static bool ValidatePkceForPublicClients(CreateClientCommand command, AuthPolicy? policy)
+    private static bool ValidatePkceForPublicClients(CreateClientCommand command)
     {
-        // Public clients should ideally require PKCE
         if (command.ClientType == OpenIddictConstants.ClientTypes.Public)
         {
             var usesAuthCode = command.Permissions?.Contains(
                 OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode) == true;
-
-            // If using authorization code flow, PKCE is highly recommended
-            if (usesAuthCode && policy?.RequirePkce == false)
-            {
-                // This is a warning-level validation - you might want to allow it but warn
-                // For now, we'll allow it but you could change this to return false for stricter validation
-                return true;
-            }
         }
 
         return true;

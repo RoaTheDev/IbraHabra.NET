@@ -1,7 +1,5 @@
 using System.Text.Json;
-using FluentValidation;
 using IbraHabra.NET.Application.Dto;
-using IbraHabra.NET.Application.Dto.Response;
 using IbraHabra.NET.Domain.Constants;
 using IbraHabra.NET.Domain.Constants.Values;
 using IbraHabra.NET.Domain.Contract;
@@ -18,8 +16,8 @@ public record CreateClientCommand(
     string? ClientSecret = null,
     string DisplayName = "",
     string? ApplicationType = null,
-    string? ClientType = "public",
-    string? ConsentType = "explicit",
+    string? ClientType = OpenIddictConstants.ClientTypes.Public,
+    string? ConsentType = OpenIddictConstants.ConsentTypes.Explicit,
     List<string>? RedirectUris = null,
     List<string>? PostLogoutRedirectUris = null,
     List<string>? Permissions = null,
@@ -55,7 +53,6 @@ public class CreateClientHandler : IWolverineHandler
                 {
                     RequireDigit = false,
                     RequireMfa = false,
-                    RequirePkce = command.ClientType == OpenIddictConstants.ClientTypes.Public,
                     RequireUppercase = false,
                     MinPasswordLength = 8,
                     RequireEmailVerification = false,
@@ -73,7 +70,7 @@ public class CreateClientHandler : IWolverineHandler
                 };
 
                 var requirements = new List<string>();
-                if (authPolicy.RequirePkce)
+                if (command.ClientType == OpenIddictConstants.ClientTypes.Public)
                 {
                     requirements.Add(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
                 }
@@ -111,7 +108,7 @@ public class CreateClientHandler : IWolverineHandler
                 await transaction.CommitAsync();
 
                 return ApiResult<CreateClientResponse>.Ok(
-                    new CreateClientResponse( app.ClientId, project.Id));
+                    new CreateClientResponse(app.ClientId, project.Id));
             }
             catch (Exception)
             {

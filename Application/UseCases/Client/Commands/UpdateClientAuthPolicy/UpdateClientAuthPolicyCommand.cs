@@ -49,15 +49,6 @@ public class UpdateClientAuthPolicyHandler : IWolverineHandler
                     ? new List<string>()
                     : JsonSerializer.Deserialize<List<string>>(client.Requirements) ?? new List<string>();
 
-                if (command.AuthPolicy.RequirePkce &&
-                    !requirements.Contains(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange))
-                {
-                    requirements.Add(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
-                }
-                else if (!command.AuthPolicy.RequirePkce)
-                {
-                    requirements.Remove(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
-                }
 
                 client.Properties = JsonSerializer.Serialize(propertiesDict);
                 client.Requirements = JsonSerializer.Serialize(requirements);

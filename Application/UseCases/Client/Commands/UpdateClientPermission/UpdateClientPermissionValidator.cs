@@ -1,20 +1,11 @@
 using FluentValidation;
+using IbraHabra.NET.Domain.Constants;
 using OpenIddict.Abstractions;
 
 namespace IbraHabra.NET.Application.UseCases.Client.Commands.UpdateClientPermission;
 
 public class UpdateClientPermissionsValidator : AbstractValidator<UpdateClientPermissionsCommand>
 {
-    private static readonly string[] ValidPermissionPrefixes =
-    [
-        OpenIddictConstants.Permissions.Prefixes.Audience,
-        OpenIddictConstants.Permissions.Prefixes.Endpoint,
-        OpenIddictConstants.Permissions.Prefixes.GrantType,
-        OpenIddictConstants.Permissions.Prefixes.ResponseType,
-        OpenIddictConstants.Permissions.Prefixes.Resource,
-        OpenIddictConstants.Permissions.Prefixes.Scope
-    ];
-
     public UpdateClientPermissionsValidator()
     {
         RuleFor(x => x.ClientId)
@@ -36,7 +27,7 @@ public class UpdateClientPermissionsValidator : AbstractValidator<UpdateClientPe
 
     private bool BeValidPermission(string permission)
     {
-        return ValidPermissionPrefixes.Any(prefix => permission.StartsWith(prefix));
+        return OauthConstantValidation.ValidPermissionPrefixes.Any(prefix => permission.StartsWith(prefix));
     }
 
     private bool HaveConsistentConfiguration(List<string> permissions)

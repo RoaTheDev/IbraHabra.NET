@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 using System.Security.Claims;
-using IbraHabra.NET.Application.Utils;
+using IbraHabra.NET.Application.Dto.Request.User;
 using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Domain.Entities;
 using Microsoft.AspNetCore;
@@ -42,6 +42,114 @@ public class OauthController : ControllerBase
         _logger = logger;
     }
 
+    // Fix consent endpoint routes and add authorization
+    [HttpGet("~/connect/consent")]
+    [Authorize] // ← ADDED
+    public async Task<IActionResult> GetConsent()
+    {
+        var request = HttpContext.GetOpenIddictServerRequest()
+                      ?? throw new InvalidOperationException("OpenID Connect request cannot be retrieved.");
+
+        var application =
+            await _applicationManager.FindByClientIdAsync(request.ClientId ?? throw new InvalidOperationException())
+            ?? throw new InvalidOperationException("Client application not found.");
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null) throw new InvalidOperationException("User not found.");
+        var model = new ConsentDto
+        {
+            ApplicationName = await _applicationManager.GetDisplayNameAsync(application) ?? "Unknown Application",
+            Scope = request.Scope,
+            RequestedScopes = new List<ScopeDescription>()
+        };
+
+        foreach (var scope in request.GetScopes())
+        {
+            var resource = await _scopeManager.FindByNameAsync(scope);
+            model.RequestedScopes.Add(resource != null
+                ? new ScopeDescription
+                {
+                    Name = scope,
+                    DisplayName = await _scopeManager.GetDisplayNameAsync(resource) ?? scope,
+                    Description = await _scopeManager.GetDescriptionAsync(resource)
+                }
+                : new ScopeDescription
+                {
+                    Name = scope,
+                    DisplayName = scope,
+                    Description = GetDefaultScopeDescription(scope)
+                });
+        }
+
+        return Ok(model);
+    }
+
+    [HttpPost("~/connect/consent")]
+    [Authorize] // ← ADDED
+    public async Task<IActionResult> PostConsent([FromBody] ConsentActionModel? input)
+    {
+        if (input == null) return BadRequest("Invalid request payload");
+
+        var request = HttpContext.GetOpenIddictServerRequest()
+                      ?? throw new InvalidOperationException("OpenID Connect request cannot be retrieved.");
+
+        var user = await _userManager.GetUserAsync(User)
+                   ?? throw new InvalidOperationException("User not found.");
+
+        if (input.Action.ToLower() == "deny")
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.AccessDenied,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user denied access."
+                }!));
+        }
+
+        if (request.ClientId is null) throw new InvalidOperationException("Client application not found.");
+        var application = await _applicationManager.FindByClientIdAsync(request.ClientId)
+                          ?? throw new InvalidOperationException("Client application not found.");
+        var userId = await _userManager.GetUserIdAsync(user);
+
+        var principal = await _signInManager.CreateUserPrincipalAsync(user);
+        principal.SetClaim(OpenIddictConstants.Claims.Subject, userId);
+
+        if (!string.IsNullOrEmpty(user.UserName))
+            principal.SetClaim(OpenIddictConstants.Claims.Name, user.UserName);
+
+        if (!string.IsNullOrEmpty(user.Email))
+            principal.SetClaim(OpenIddictConstants.Claims.Email, user.Email);
+
+        // ADDED: Email verified claim
+        if (user.EmailConfirmed)
+            principal.SetClaim(OpenIddictConstants.Claims.EmailVerified, true);
+
+        principal.SetScopes(request.GetScopes());
+
+        var resources = await _scopeManager.ListResourcesAsync(principal.GetScopes())
+            .ToListAsync();
+        principal.SetResources(resources);
+
+        var authorization = await _authorizationManager.CreateAsync(
+            principal: principal,
+            subject: userId,
+            client: await _applicationManager.GetIdAsync(application) ?? string.Empty,
+            type: OpenIddictConstants.AuthorizationTypes.Permanent,
+            scopes: principal.GetScopes(),
+            cancellationToken: HttpContext.RequestAborted);
+
+        principal.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization));
+
+        foreach (var claim in principal.Claims)
+        {
+            claim.SetDestinations(GetDestinations(claim));
+        }
+
+        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+
     [HttpGet("~/connect/authorize")]
     [HttpPost("~/connect/authorize")]
     [IgnoreAntiforgeryToken]
@@ -50,7 +158,6 @@ public class OauthController : ControllerBase
         var request = HttpContext.GetOpenIddictServerRequest() ??
                       throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
-        // IMPROVEMENT: Better error handling and logging
         var application = await _clientRepo.GetViaConditionAsync(c => c.ClientId == request.ClientId! && c.IsActive);
         if (application == null)
         {
@@ -60,44 +167,30 @@ public class OauthController : ControllerBase
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client application is not recognized."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The client application is not recognized."
                 }!));
         }
-
-        var authPolicy = ReadAuthPolicy.GetAuthPolicy(application.Properties);
-
-        // IMPROVEMENT: Enhanced PKCE validation
-        if (authPolicy.RequirePkce && string.IsNullOrEmpty(request.CodeChallenge))
-        {
-            _logger.LogWarning("PKCE required but not provided for client: {ClientId}", request.ClientId);
-            return Forbid(
-                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                properties: new AuthenticationProperties(new Dictionary<string, string>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "PKCE is required for this client."
-                }!));
-        }
-
-        // IMPROVEMENT: Validate code challenge method
+       
         if (!string.IsNullOrEmpty(request.CodeChallenge))
         {
             var codeChallengeMethod = request.CodeChallengeMethod ?? OpenIddictConstants.CodeChallengeMethods.Plain;
             if (codeChallengeMethod != OpenIddictConstants.CodeChallengeMethods.Sha256)
             {
-                _logger.LogWarning("Invalid code challenge method: {Method} for client: {ClientId}", 
+                _logger.LogWarning("Invalid code challenge method: {Method} for client: {ClientId}",
                     codeChallengeMethod, request.ClientId);
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidRequest,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Only S256 code challenge method is supported."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidRequest,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "Only S256 code challenge method is supported."
                     }!));
             }
         }
 
-        // NEW: Validate requested scopes against allowed scopes
         var requestedScopes = request.GetScopes().ToList();
         var allowedScopes = await _applicationManager.GetPermissionsAsync(application);
         var allowedScopeNames = allowedScopes
@@ -108,29 +201,30 @@ public class OauthController : ControllerBase
         var unauthorizedScopes = requestedScopes.Except(allowedScopeNames).ToList();
         if (unauthorizedScopes.Any())
         {
-            _logger.LogWarning("Unauthorized scopes requested: {Scopes} for client: {ClientId}", 
+            _logger.LogWarning("Unauthorized scopes requested: {Scopes} for client: {ClientId}",
                 string.Join(", ", unauthorizedScopes), request.ClientId);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidScope,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "One or more requested scopes are not allowed."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "One or more requested scopes are not allowed."
                 }!));
         }
 
-        // NEW: Validate redirect URI
         var redirectUris = await _applicationManager.GetRedirectUrisAsync(application);
         if (request.RedirectUri != null && !redirectUris.Contains(request.RedirectUri))
         {
-            _logger.LogWarning("Invalid redirect URI: {RedirectUri} for client: {ClientId}", 
+            _logger.LogWarning("Invalid redirect URI: {RedirectUri} for client: {ClientId}",
                 request.RedirectUri, request.ClientId);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidRequest,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The specified redirect URI is not valid."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The specified redirect URI is not valid."
                 }!));
         }
 
@@ -144,18 +238,24 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.LoginRequired,
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.LoginRequired,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user is not logged in."
                     }!));
             }
 
             // Store the authorization request in session for after login
+            var returnUrl = Request.PathBase + Request.Path + QueryString.Create(
+                Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
+
+            _logger.LogInformation("User not authenticated, redirecting to login for client: {ClientId}",
+                request.ClientId);
+
             return Challenge(
                 authenticationSchemes: IdentityConstants.ApplicationScheme,
                 properties: new AuthenticationProperties
                 {
-                    RedirectUri = Request.PathBase + Request.Path + QueryString.Create(
-                        Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList())
+                    RedirectUri = returnUrl
                 });
         }
 
@@ -168,7 +268,7 @@ public class OauthController : ControllerBase
 
         var userId = await _userManager.GetUserIdAsync(user);
 
-        // IMPROVEMENT: Check if user account is locked or disabled
+        // Check if user account is locked or disabled
         if (!await _signInManager.CanSignInAsync(user))
         {
             _logger.LogWarning("User {UserId} cannot sign in (account may be locked)", userId);
@@ -177,7 +277,8 @@ public class OauthController : ControllerBase
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.AccessDenied,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Your account cannot be accessed at this time."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "Your account cannot be accessed at this time."
                 }!));
         }
 
@@ -193,12 +294,15 @@ public class OauthController : ControllerBase
         if (!authorizations.Any() &&
             await _applicationManager.HasConsentTypeAsync(application, OpenIddictConstants.ConsentTypes.External))
         {
+            _logger.LogWarning("External consent required but not granted for user {UserId} and client {ClientId}",
+                userId, request.ClientId);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.ConsentRequired,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The logged-in user is not allowed to access this client application."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The logged-in user is not allowed to access this client application."
                 }!));
         }
 
@@ -216,7 +320,7 @@ public class OauthController : ControllerBase
             principal.SetClaim(OpenIddictConstants.Claims.Email, user.Email);
         }
 
-        // NEW: Add email verified claim
+        // Add email verified claim
         if (user.EmailConfirmed)
         {
             principal.SetClaim(OpenIddictConstants.Claims.EmailVerified, true);
@@ -230,22 +334,26 @@ public class OauthController : ControllerBase
         if (authorization == null)
         {
             var consentType = await _applicationManager.GetConsentTypeAsync(application);
-            
-            // IMPROVEMENT: Better consent handling
+
+            // UPDATED: Better consent handling for mobile/SPA clients
             if (consentType == OpenIddictConstants.ConsentTypes.Explicit)
             {
-                // TODO: In production, redirect to consent page
-                // For now, store the request and return a view
-                // Example: return View("Consent", new ConsentViewModel { ... });
-                
-                // Development: Return error asking for consent
-                _logger.LogInformation("Consent required for user {UserId} and client {ClientId}", userId, request.ClientId);
+                _logger.LogInformation("Consent required for user {UserId} and client {ClientId}", userId,
+                    request.ClientId);
+
+                // For mobile/SPA clients, return consent_required error
+                // Client will then:
+                // 1. Call GET /connect/consent to retrieve consent details
+                // 2. Show consent UI to user
+                // 3. Call POST /connect/consent with user's decision
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.ConsentRequired,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "User consent is required."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.ConsentRequired,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "User consent is required. Call GET /connect/consent to retrieve consent details, then POST /connect/consent with user decision."
                     }!));
             }
 
@@ -257,8 +365,9 @@ public class OauthController : ControllerBase
                 type: OpenIddictConstants.AuthorizationTypes.Permanent,
                 scopes: principal.GetScopes(),
                 cancellationToken: HttpContext.RequestAborted);
-            
-            _logger.LogInformation("Created new authorization for user {UserId} and client {ClientId}", userId, request.ClientId);
+
+            _logger.LogInformation("Created new authorization for user {UserId} and client {ClientId}", userId,
+                request.ClientId);
         }
 
         principal.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization, HttpContext.RequestAborted));
@@ -291,8 +400,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization code is invalid or expired."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization code is invalid or expired."
                     }!));
             }
 
@@ -304,8 +415,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization code is invalid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization code is invalid."
                     }!));
             }
 
@@ -317,8 +430,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization code is invalid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization code is invalid."
                     }!));
             }
 
@@ -330,8 +445,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization code is no longer valid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization code is no longer valid."
                     }!));
             }
 
@@ -343,8 +460,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization code is no longer valid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization code is no longer valid."
                     }!));
             }
 
@@ -368,8 +487,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is invalid or expired."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The refresh token is invalid or expired."
                     }!));
             }
 
@@ -381,8 +502,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is invalid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The refresh token is invalid."
                     }!));
             }
 
@@ -394,8 +517,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is invalid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The refresh token is invalid."
                     }!));
             }
 
@@ -407,8 +532,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is no longer valid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The refresh token is no longer valid."
                     }!));
             }
 
@@ -420,8 +547,10 @@ public class OauthController : ControllerBase
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string>
                     {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is no longer valid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                            OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The refresh token is no longer valid."
                     }!));
             }
 
@@ -441,13 +570,16 @@ public class OauthController : ControllerBase
                 var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
                 if (application == null)
                 {
-                    _logger.LogWarning("Client credentials grant attempted for unknown client: {ClientId}", request.ClientId);
+                    _logger.LogWarning("Client credentials grant attempted for unknown client: {ClientId}",
+                        request.ClientId);
                     return Forbid(
                         authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                         properties: new AuthenticationProperties(new Dictionary<string, string>
                         {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client application is not recognized."
+                            [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                                OpenIddictConstants.Errors.InvalidClient,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                                "The client application is not recognized."
                         }!));
                 }
 
@@ -462,14 +594,17 @@ public class OauthController : ControllerBase
                 var unauthorizedScopes = requestedScopes.Except(allowedScopeNames).ToList();
                 if (unauthorizedScopes.Any())
                 {
-                    _logger.LogWarning("Unauthorized scopes requested in client credentials: {Scopes} for client: {ClientId}", 
+                    _logger.LogWarning(
+                        "Unauthorized scopes requested in client credentials: {Scopes} for client: {ClientId}",
                         string.Join(", ", unauthorizedScopes), request.ClientId);
                     return Forbid(
                         authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                         properties: new AuthenticationProperties(new Dictionary<string, string>
                         {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidScope,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The requested scopes are not allowed for this client."
+                            [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                                OpenIddictConstants.Errors.InvalidScope,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                                "The requested scopes are not allowed for this client."
                         }!));
                 }
 
@@ -553,7 +688,7 @@ public class OauthController : ControllerBase
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
 
         _logger.LogInformation("User {UserId} logged out", userId ?? "Unknown");
-        
+
         return SignOut(
             authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
             properties: new AuthenticationProperties
@@ -594,7 +729,8 @@ public class OauthController : ControllerBase
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidToken,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The access token is missing required claims."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The access token is missing required claims."
                 }!));
         }
 
@@ -607,7 +743,8 @@ public class OauthController : ControllerBase
                 properties: new AuthenticationProperties(new Dictionary<string, string>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidToken,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The specified access token is no longer valid."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The specified access token is no longer valid."
                 }!));
         }
 
@@ -636,6 +773,17 @@ public class OauthController : ControllerBase
 
         return Ok(claims);
     }
+
+    private static string GetDefaultScopeDescription(string scope) =>
+        scope switch
+        {
+            OpenIddictConstants.Scopes.OpenId => "Access your user identifier",
+            OpenIddictConstants.Scopes.Email => "Access your email address",
+            OpenIddictConstants.Scopes.Profile => "Access your profile information",
+            OpenIddictConstants.Scopes.Roles => "Access your roles and permissions",
+            OpenIddictConstants.Scopes.OfflineAccess => "Access your data while you're offline",
+            _ => $"Access {scope} information"
+        };
 
     private async Task<bool> ValidateSecurityStampAsync(User user, ClaimsPrincipal principal)
     {

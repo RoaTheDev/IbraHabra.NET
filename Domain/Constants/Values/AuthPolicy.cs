@@ -9,5 +9,4 @@ public class AuthPolicy
     public bool RequireEmailVerification { get; set; }
     public bool RequireMfa { get; set; }
     
-    public bool RequirePkce { get; set; } = true;
 }

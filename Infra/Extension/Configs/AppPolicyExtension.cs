@@ -434,7 +434,7 @@ public static class AppPolicyExtension
 
                 var subject = context.Principal?.GetClaim(OpenIddictConstants.Claims.Subject);
                 var clientId = context.Request.ClientId;
-                var grantType = context.Request?.GrantType;
+                var grantType = context.Request.GrantType;
 
                 logger.LogInformation(
                     "Token issued - Subject: {Subject}, Client: {ClientId}, GrantType: {GrantType}",
@@ -507,39 +507,38 @@ public static class AppPolicyExtension
                 if (!context.Request.IsAuthorizationCodeGrantType())
                     return;
 
-                // Retrieve the client (OpenIddict resolves it internally)
                 var applicationManager = context.Transaction.GetHttpRequest()!
                     .HttpContext.RequestServices.GetRequiredService<IOpenIddictApplicationManager>();
-                var client = await applicationManager.FindByClientIdAsync(context.Request.ClientId);
-                if (client == null)
+                if (context.Request.ClientId != null)
                 {
-                    // Client not found; let default validation handle
-                    return;
-                }
-
-                // Get client type from properties (assuming you store it as OpenIddictConstants.ClientTypes.Public/Confidential)
-                var clientType = await applicationManager.GetClientTypeAsync(client);
-                if (clientType == OpenIddictConstants.ClientTypes.Public)
-                {
-                    // Enforce PKCE for public clients
-                    if (string.IsNullOrEmpty(context.Request.CodeChallenge))
+                    var client = await applicationManager.FindByClientIdAsync(context.Request.ClientId);
+                    if (client == null)
                     {
-                        context.Reject(
-                            error: OpenIddictConstants.Errors.InvalidRequest,
-                            description: "PKCE is required for public clients.");
                         return;
                     }
 
-                    // Optional: Enforce S256 method only (mirroring your controller logic)
-                    var codeChallengeMethod = context.Request.CodeChallengeMethod ??
-                                              OpenIddictConstants.CodeChallengeMethods.Plain;
-                    if (codeChallengeMethod != OpenIddictConstants.CodeChallengeMethods.Sha256)
+                    var clientType = await applicationManager.GetClientTypeAsync(client);
+                    if (clientType == OpenIddictConstants.ClientTypes.Public)
                     {
-                        context.Reject(
-                            error: OpenIddictConstants.Errors.InvalidRequest,
-                            description: "Only S256 code challenge method is supported.");
+                        if (string.IsNullOrEmpty(context.Request.CodeChallenge))
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidRequest,
+                                description: "PKCE is required for public clients.");
+                            return;
+                        }
+
+                        var codeChallengeMethod = context.Request.CodeChallengeMethod ??
+                                                  OpenIddictConstants.CodeChallengeMethods.Plain;
+                        if (codeChallengeMethod != OpenIddictConstants.CodeChallengeMethods.Sha256)
+                        {
+                            context.Reject(
+                                error: OpenIddictConstants.Errors.InvalidRequest,
+                                description: "Only S256 code challenge method is supported.");
+                        }
                     }
                 }
+
                 // For confidential clients, no PKCE check—proceed normally
             }));
     }
