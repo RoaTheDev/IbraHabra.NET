@@ -39,22 +39,20 @@ export const Route = createFileRoute('/_authenticated')({
     const now = Date.now()
     const backoffDelay = getBackoffDelay()
 
-    if (now - lastVerifyAttempt < backoffDelay) {
-      return
-    }
-
+    if (now - lastVerifyAttempt < backoffDelay) return
     lastVerifyAttempt = now
 
     adminAuthStoreAction.rehydrate()
-    const { token, sessionCode2Fa } = adminAuthStore.state
+    const { user, sessionCode2Fa } = adminAuthStore.state
 
-    if (!token) {
+    if (!user) {
       throw redirect({ to: '/auth/login' })
     }
 
     if (sessionCode2Fa) {
       throw redirect({ to: '/auth/2fa' })
     }
+
 
     if (typeof window !== 'undefined') {
       const lastVerified = sessionUtils.get<string>(
@@ -72,25 +70,15 @@ export const Route = createFileRoute('/_authenticated')({
           )
           consecutiveFailures = 0
         } catch (error: unknown) {
-          if (error instanceof AxiosError) {
-            const isAuthError = error.response?.status === 401
-
-            if (isAuthError) {
-              console.error('Authentication failed - token invalid')
-              sessionUtils.remove(clientCacheKeys.last_verified_session)
-              adminAuthStoreAction.reset()
-              consecutiveFailures = 0
-              throw redirect({ to: '/auth/login' })
-            } else {
-              consecutiveFailures++
-              console.warn(
-                `Token verification failed (attempt ${consecutiveFailures}), backing off for ${backoffDelay}ms:`,
-                error.message,
-              )
-            }
+          if (error instanceof AxiosError && error.response?.status === 401) {
+            console.error('Authentication expired or revoked')
+            adminAuthStoreAction.reset()
+            sessionUtils.remove(clientCacheKeys.last_verified_session)
+            consecutiveFailures = 0
+            throw redirect({ to: '/auth/login' })
           } else {
             consecutiveFailures++
-            console.warn('Unexpected error during  verification:', error)
+            console.warn('Verification failed, backing off:', error)
           }
         }
       }

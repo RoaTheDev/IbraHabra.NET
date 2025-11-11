@@ -1,6 +1,6 @@
 import { Store } from '@tanstack/store'
+import { localStorageUtils } from '@/lib/localStorageUtils'
 import { clientCacheKeys } from '@/constants/clientCacheKeys.ts'
-import { cookieUtils } from '@/lib/cookieStorageUtils.ts'
 
 export type AdminUser = {
   userId: string
@@ -10,40 +10,38 @@ export type AdminUser = {
 
 export type AdminAuthPersisted = {
   user: AdminUser | null
-  token: string | null
-  expiresAt: string | null
-  sessionCode2Fa?: string | null
+  sessionCode2Fa: string | null
 }
 
 export type AdminAuthState = {
   user: AdminUser | null
-  token: string | null
-  expiresAt: string | null
-  sessionCode2Fa?: string | null
+  sessionCode2Fa: string | null
   loading: boolean
+  isAuthenticated: boolean
 }
+
 
 export const adminAuthStore = new Store<AdminAuthState>({
   user: null,
-  token: null,
   sessionCode2Fa: null,
   loading: false,
-  expiresAt: null,
+  isAuthenticated: false,
 })
 
 let isRehydrating = false
 adminAuthStore.subscribe((value) => {
   if (isRehydrating) return
-  const { prevVal, currentVal } = value
 
-  if (
-    prevVal.user !== currentVal.user ||
-    prevVal.token !== currentVal.token ||
-    prevVal.expiresAt !== currentVal.expiresAt ||
-    prevVal.sessionCode2Fa !== currentVal.sessionCode2Fa
-  ) {
-    const { loading, ...persisted } = currentVal
-    cookieUtils.set(clientCacheKeys.auth, JSON.stringify(persisted))
+  const { currentVal } = value
+  const persisted: AdminAuthPersisted = {
+    user: currentVal.user,
+    sessionCode2Fa: currentVal.sessionCode2Fa,
+  }
+
+  if (currentVal.user) {
+    localStorageUtils.set<AdminAuthPersisted>(clientCacheKeys.user_meta, persisted)
+  } else {
+    localStorageUtils.remove(clientCacheKeys.user_meta)
   }
 })
 
@@ -51,46 +49,45 @@ export const adminAuthStoreAction = {
   setLoading: (loading: boolean) =>
     adminAuthStore.setState((prev) => ({ ...prev, loading })),
 
-  setAuth: (
-    user: AdminUser,
-    token: string,
-    expiresAt: string,
-    sessionCode2Fa: string | null,
-  ) =>
-    adminAuthStore.setState((prev) => ({
-      ...prev,
+  setAuth: (user: AdminUser, sessionCode2Fa: string | null) => {
+    adminAuthStore.setState({
       user,
-      token,
-      expiresAt,
-      sessionCode2Fa: sessionCode2Fa || null,
-    })),
-  setToken: (token: string) =>
-    adminAuthStore.setState((prev) => ({ ...prev, token: token })),
+      sessionCode2Fa,
+      loading: false,
+      isAuthenticated: true,
+    })
+  },
 
   set2FaSessionCode: (session: string | null) =>
-    adminAuthStore.setState((prev) => ({ ...prev, sessionCode2Fa: session })),
+    adminAuthStore.setState((prev) => ({
+      ...prev,
+      sessionCode2Fa: session,
+    })),
 
-  reset: () =>
+  reset: () => {
     adminAuthStore.setState({
       user: null,
-      token: null,
-      expiresAt: null,
       sessionCode2Fa: null,
       loading: false,
-    }),
+      isAuthenticated: false,
+    })
+    localStorageUtils.remove(clientCacheKeys.user_meta)
+  },
 
   rehydrate: () => {
-    const saved = cookieUtils.get(clientCacheKeys.auth)
+    const saved = localStorageUtils.get<AdminAuthPersisted>(clientCacheKeys.user_meta)
     if (saved) {
       try {
-        const parsed = JSON.parse(saved)
         isRehydrating = true
-        adminAuthStore.setState({ ...parsed, loading: false })
-      } catch {
-        cookieUtils.remove(clientCacheKeys.auth)
+        adminAuthStore.setState({
+          ...saved,
+          loading: false,
+          isAuthenticated: saved.user !== null,
+        })
       } finally {
         isRehydrating = false
       }
     }
   },
+
 }

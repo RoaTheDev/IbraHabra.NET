@@ -1,4 +1,4 @@
-import { apiClient, baseUrl } from '@/lib/apiClient.ts'
+import { apiClient, adminAuthEndpoint } from '@/lib/apiClient.ts'
 import {
   AdminUserInfoResponse,
   ConfirmEnable2FaAdminRequest,
@@ -17,28 +17,24 @@ import {
   VerifyRecovery2FaAdminResponse,
 } from '@/features/admin/auth/adminAuthTypes.ts'
 import { ApiResponse } from '@/types/ApiResponse.ts'
-import { CreateUserRequest } from '@/features/admin/manageUser/adminManageType.ts'
 
 const endpoint = {
-  login: `${baseUrl}/login`,
-  createUser: `${baseUrl}/register`,
-  me: `${baseUrl}/me`,
-  enable2fa: `${baseUrl}/2fa/enable`,
-  disable2fa: `${baseUrl}/2fa/disable`,
-  confirm2fa: `${baseUrl}/2fa/enable/confirm`,
-  verify2fa: `${baseUrl}/verify-2fa`,
-  recovery2fa: `${baseUrl}/2fa/recovery`,
-  verify: `${baseUrl}/verify`,
-  logout: `${baseUrl}/logout`,
-  regenerateRecoveryCodes: `${baseUrl}/regenerate-recovery-codes`,
+  login: `${adminAuthEndpoint}/login`,
+  me: `${adminAuthEndpoint}/me`,
+  enable2fa: `${adminAuthEndpoint}/2fa/enable`,
+  disable2fa: `${adminAuthEndpoint}/2fa/disable`,
+  confirm2fa: `${adminAuthEndpoint}/2fa/enable/confirm`,
+  verify2fa: `${adminAuthEndpoint}/verify-2fa`,
+  recovery2fa: `${adminAuthEndpoint}/2fa/recovery`,
+  verify: `${adminAuthEndpoint}/verify`,
+  logout: `${adminAuthEndpoint}/logout`,
+  regenerateRecoveryCodes: `${adminAuthEndpoint}/regenerate-recovery-codes`,
 }
 
 export const authApi = {
   login: (payload: LoginRequest): Promise<ApiResponse<LoginResponse>> =>
     apiClient.post<ApiResponse<LoginResponse>>(endpoint.login, payload),
 
-  createUser: (payload: CreateUserRequest): Promise<ApiResponse<string>> =>
-    apiClient.post<ApiResponse<string>>(endpoint.createUser, payload),
 
   me: (): Promise<ApiResponse<AdminUserInfoResponse>> =>
     apiClient.get<ApiResponse<AdminUserInfoResponse>>(endpoint.me),

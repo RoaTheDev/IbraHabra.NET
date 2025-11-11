@@ -1,5 +1,5 @@
 export const clientCacheKeys = {
-  auth: 'ibrahabra_auth',
+  user_meta: 'ibrahabra_user_metadata',
   last_verified_session: 'ibrahabra_auth_last_verified',
   theme: 'ibrahabra_theme',
 } as const

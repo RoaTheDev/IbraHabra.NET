@@ -51,17 +51,14 @@ export const useLogin = () =>
     onMutate: () => adminAuthStoreAction.setLoading(true),
     onSuccess: (response) => {
       const { data } = response
+
       const user: AdminUser = {
         userId: data.userId,
         requiresTwoFactor: data.requiresTwoFactor,
         email: data.email,
       }
-      adminAuthStoreAction.setAuth(
-        user,
-        data.token,
-        data.expiresAt,
-        data.session2Fa,
-      )
+
+      adminAuthStoreAction.setAuth(user, data.session2Fa)
     },
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })
@@ -77,12 +74,14 @@ export const useVerify2Fa = () =>
     onMutate: () => adminAuthStoreAction.setLoading(true),
     onSuccess: (response) => {
       const { data } = response
+
       const userData: AdminUser = {
         userId: data.userId,
         email: data.email,
         requiresTwoFactor: true,
       }
-      adminAuthStoreAction.setAuth(userData, data.token, data.expiresAt, null)
+
+      adminAuthStoreAction.setAuth(userData, null)
     },
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })
@@ -98,12 +97,14 @@ export const useVerifyRecoveryCode = () =>
     onMutate: () => adminAuthStoreAction.setLoading(true),
     onSuccess: (response) => {
       const { data } = response
+
       const userData: AdminUser = {
         userId: data.userId,
         email: data.email,
         requiresTwoFactor: true,
       }
-      adminAuthStoreAction.setAuth(userData, data.token, data.expiresAt, null)
+
+      adminAuthStoreAction.setAuth(userData, null)
     },
     onSettled: () => adminAuthStoreAction.setLoading(false),
   })
@@ -152,21 +153,19 @@ export const useConfirm2Fa = () => {
       return { previousUserInfo }
     },
     onSuccess: async () => {
-      const { user, token, expiresAt, sessionCode2Fa } = adminAuthStore.state
+      const { user } = adminAuthStore.state
 
-      if (!user || !token || !expiresAt) return
+      if (!user) return
 
       const newUserData: AdminUser = {
         ...user,
         requiresTwoFactor: true,
       }
 
-      adminAuthStoreAction.setAuth(
-        newUserData,
-        token,
-        expiresAt,
-        sessionCode2Fa ?? null,
-      )
+      adminAuthStore.setState((prev) => ({
+        ...prev,
+        user: newUserData,
+      }))
 
       await queryClient.invalidateQueries({ queryKey: AdminAuthQueryKeys.me() })
     },
@@ -216,21 +215,19 @@ export const useDisable2Fa = () => {
       return { previousUserInfo }
     },
     onSuccess: async () => {
-      const { user, token, expiresAt, sessionCode2Fa } = adminAuthStore.state
+      const { user } = adminAuthStore.state
 
-      if (!user || !token || !expiresAt) return
+      if (!user) return
 
       const newUserData: AdminUser = {
         ...user,
         requiresTwoFactor: false,
       }
 
-      adminAuthStoreAction.setAuth(
-        newUserData,
-        token,
-        expiresAt,
-        sessionCode2Fa ?? null,
-      )
+      adminAuthStore.setState((prev) => ({
+        ...prev,
+        user: newUserData,
+      }))
 
       await queryClient.invalidateQueries({ queryKey: AdminAuthQueryKeys.me() })
     },
@@ -247,6 +244,7 @@ export const useDisable2Fa = () => {
     },
   })
 }
+
 export const useRegenerateRecoveryCodes = () => {
   return useMutation<
     ApiResponse<RegenerateRecoveryCodesAdminResponse>,
@@ -261,6 +259,7 @@ export const useRegenerateRecoveryCodes = () => {
     },
   })
 }
+
 export const useAuthUser = () =>
   useQuery<AdminUserInfoResponse, AxiosError<ApiResponse<null>>>({
     queryKey: AdminAuthQueryKeys.me(),
@@ -273,3 +272,18 @@ export const useAuthUser = () =>
     refetchOnMount: false,
     refetchOnWindowFocus: false,
   })
+
+export const useLogout = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: authApi.logout,
+    onSuccess: () => {
+      adminAuthStoreAction.reset()
+
+      queryClient.clear()
+
+      window.location.href = '/auth/login'
+    },
+  })
+}

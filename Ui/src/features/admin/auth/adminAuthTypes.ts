@@ -20,15 +20,12 @@ export type LoginRequest = z.infer<typeof loginRequestSchema>
 export type LoginResponse = {
   userId: string
   email: string
-  token: string
   expiresAt: string
   requiresTwoFactor: boolean
   session2Fa: string | null
 }
 
-
 export type RefreshTokenResponse = {
-  token: string
   expiredAt: string
 }
 
@@ -44,16 +41,15 @@ export type VerifyRecovery2FaAdminRequest = {
 export type Verify2FaAdminResponse = {
   userId: string
   email: string
-  token: string
   expiresAt: string
 }
 export type VerifyRecovery2FaAdminResponse = {
   userId: string
   email: string
-  token: string
   expiresAt: string
-   remainingRecoveryCodes : number
+  remainingRecoveryCodes: number
 }
+
 export interface RegenerateRecoveryCodesAdminRequest {
   password: string
 }
@@ -69,7 +65,7 @@ export type Enable2FaAdminResponse = {
   recoveryCodes: string[]
 }
 export type Disable2FaAdminRequest = {
-  password :string
+  password: string
 }
 export type Disable2FaAdminResponse = {
   success: boolean
@@ -95,8 +91,7 @@ export type AdminUserInfoResponse = {
   createdAt: Date
 }
 
-
 export type VerifyAdminUserResponse = {
-   valid: boolean
+  valid: boolean
   message: string
 }

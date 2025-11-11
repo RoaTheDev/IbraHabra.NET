@@ -13,7 +13,7 @@ export type AssignRoleRequest = {
 export type RoleResponse = {
   roleId: string
   roleName: string
-  createdAt: Date
+  createdAt: string
 }
 
 export type RoleResponseList = RoleResponse[]
@@ -21,14 +21,18 @@ export type RoleResponseList = RoleResponse[]
 export type GetUserInRoleRequest = {
   roleId: string
 }
-export type UserRoleResponse = {
+export type UserInRoleResponse = {
   userId: string
   email: string
-  firstName: string
-  lastName: string
+  firstName: string | null
+  lastName: string  | null
 }
-export type UserRoleResponseList = RoleResponseList[]
-
+export type UserRoleResponse = {
+  roleId: string
+  roleName: string
+}
+export type UserRoleResponseList = UserRoleResponse[]
+export type UserInRoleResponseList = UserInRoleResponse[]
 export type GetUserRolesRequest = {
   userId: string
 }

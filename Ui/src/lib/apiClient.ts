@@ -1,9 +1,5 @@
 import type { AxiosInstance, AxiosRequestConfig } from 'axios'
 import axios from 'axios'
-import {
-  adminAuthStore,
-  adminAuthStoreAction,
-} from '@/stores/adminAuthStore.ts'
 import { ApiResponse } from '@/types/ApiResponse.ts'
 import { RefreshTokenResponse } from '@/features/admin/auth/adminAuthTypes.ts'
 
@@ -14,6 +10,12 @@ interface ApiConfig {
 
 class ApiClient {
   private readonly client: AxiosInstance
+  private isRefreshing = false
+  private refreshPromise: Promise<void> | null = null
+  private failedQueue: Array<{
+    resolve: (value?: any) => void
+    reject: (reason?: any) => void
+  }> = []
 
   constructor(config: ApiConfig) {
     this.client = axios.create({
@@ -22,6 +24,7 @@ class ApiClient {
       withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       },
     })
 
@@ -66,30 +69,21 @@ class ApiClient {
   }
 
   private setupInterceptors(): void {
-    let isRefreshing = false
-    let failedQueue: Array<{
-      resolve: (value?: any) => void
-      reject: (reason?: any) => void
-    }> = []
-
-    const processQueue = (error: any, token: string | null = null) => {
-      failedQueue.forEach((prom) => {
-        if (error) {
-          prom.reject(error)
-        } else {
-          prom.resolve(token)
+    this.client.interceptors.request.use(
+      async (config) => {
+        if (
+          config.url?.includes('/login') ||
+          config.url?.includes('/verify-2fa') ||
+          config.url?.includes('/2fa/recovery') ||
+          config.url?.includes('/refresh')
+        ) {
+          return config
         }
-      })
-      failedQueue = []
-    }
 
-    this.client.interceptors.request.use((config) => {
-      const token = adminAuthStore.state.token
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-      return config
-    })
+        return config
+      },
+      (error) => Promise.reject(error),
+    )
 
     this.client.interceptors.response.use(
       (response) => response,
@@ -101,7 +95,6 @@ class ApiClient {
           originalRequest._retry
         ) {
           if (error.response?.status === 401) {
-            adminAuthStoreAction.reset()
             window.location.href = '/auth/login'
           }
           return Promise.reject(error)
@@ -111,64 +104,85 @@ class ApiClient {
           return Promise.reject(error)
         }
 
-        if (isRefreshing) {
+        if (this.isRefreshing) {
           return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject })
+            this.failedQueue.push({ resolve, reject })
+            this.processQueuedRequest({ resolve, reject }, 10000).catch(reject)
           })
-            .then((token) => {
-              originalRequest.headers['Authorization'] = `Bearer ${token}`
+            .then(() => {
               return this.client(originalRequest)
             })
-            .catch((err) => Promise.reject(err))
+            .catch((err) => {
+              console.error('Queued request failed:', err)
+              return Promise.reject(err)
+            })
         }
 
         originalRequest._retry = true
-        isRefreshing = true
+        this.isRefreshing = true
+
+        this.refreshPromise = (async () => {
+          try {
+            await this.client.post<ApiResponse<RefreshTokenResponse>>(
+              '/admin/auth/refresh',
+              {},
+            )
+
+            this.processQueue(null)
+          } catch (refreshError) {
+            this.processQueue(refreshError)
+            window.location.href = '/auth/login'
+            throw refreshError
+          } finally {
+            this.isRefreshing = false
+            this.refreshPromise = null
+          }
+        })()
 
         try {
-          const jwtToken = adminAuthStore.state.token
-          if (!jwtToken) throw new Error('No token available')
-
-          const response = await this.client.post<
-            ApiResponse<RefreshTokenResponse>
-          >(
-            '/admin/auth/refresh',
-            {},
-            {
-              headers: {
-                Authorization: `Bearer ${jwtToken}`,
-                'Content-Type': 'application/json',
-              },
-            },
-          )
-
-          const { token, expiredAt } = response.data.data
-
-          adminAuthStoreAction.setAuth(
-            adminAuthStore.state.user!,
-            token,
-            expiredAt,
-            adminAuthStore.state.sessionCode2Fa ?? null,
-          )
-
-          originalRequest.headers['Authorization'] = `Bearer ${token}`
-          processQueue(null, token)
-
+          await this.refreshPromise
           return this.client(originalRequest)
         } catch (refreshError) {
-          processQueue(refreshError, null)
-          adminAuthStoreAction.reset()
-          window.location.href = '/auth/login'
           return Promise.reject(refreshError)
-        } finally {
-          isRefreshing = false
         }
       },
     )
+  }
+
+  private processQueue(error: any, token: string | null = null) {
+    this.failedQueue.forEach((prom) => {
+      if (error) {
+        prom.reject(error)
+      } else {
+        prom.resolve(token)
+      }
+    })
+    this.failedQueue = []
+  }
+
+  private async processQueuedRequest(
+    prom: { resolve: (value?: any) => void; reject: (reason?: any) => void },
+    timeout = 5000,
+  ) {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Token refresh timeout')), timeout),
+    )
+
+    try {
+      if (this.refreshPromise) {
+        await Promise.race([this.refreshPromise, timeoutPromise])
+        prom.resolve()
+      } else {
+        prom.reject(new Error('No refresh in progress'))
+      }
+    } catch (error) {
+      prom.reject(error)
+    }
   }
 }
 
 export const apiClient = new ApiClient({
   baseURL: `${import.meta.env.VITE_API_URL}/${import.meta.env.VITE_API_VERSION}/api`,
 })
-export const baseUrl = '/admin/auth'
+export const adminAuthEndpoint = '/admin/auth'
+export const adminRoleEndpoint = '/admin/roles'
