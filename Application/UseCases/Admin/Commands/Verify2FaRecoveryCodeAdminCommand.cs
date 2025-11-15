@@ -15,8 +15,6 @@ public record VerifyRecoveryCodeAdminCommand(string Session2Fa, string RecoveryC
 public record VerifyRecoveryCodeAdminResponse(
     Guid UserId,
     string Email,
-    string Token,
-    DateTime ExpiresAt,
     int RemainingRecoveryCodes);
 
 public class VerifyRecoveryCodeAdminHandler : IWolverineHandler
@@ -27,7 +25,7 @@ public class VerifyRecoveryCodeAdminHandler : IWolverineHandler
         ICacheService cache,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
-        IRefreshTokenService refreshTokenService)
+        ITokenService tokenService)
     {
         var cachedEmail = await cache.GetAsync<string>($"2fa:{command.Session2Fa}");
 
@@ -75,17 +73,15 @@ public class VerifyRecoveryCodeAdminHandler : IWolverineHandler
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
         var expiresAt = DateTime.UtcNow.AddHours(8);
-        var refreshToken = await refreshTokenService.GenerateAndStoreAsync(user.Id);
-        refreshTokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
-
+        var refreshToken = await tokenService.GenerateAndStoreAsync(user.Id);
+        tokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
+        tokenService.SetAccessTokenCookie(httpContextAccessor.HttpContext!, token);
         var remainingCodes = await userManager.CountRecoveryCodesAsync(user);
 
         return ApiResult<VerifyRecoveryCodeAdminResponse>.Ok(
             new VerifyRecoveryCodeAdminResponse(
                 UserId: user.Id,
                 Email: user.Email!,
-                Token: token,
-                ExpiresAt: expiresAt,
                 RemainingRecoveryCodes: remainingCodes));
     }
 }

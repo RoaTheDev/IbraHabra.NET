@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.AssignProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RemoveProjectRole;
@@ -5,6 +6,7 @@ using IbraHabra.NET.Application.UseCases.Admin.Commands.UpdateProjectRole;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
 using IbraHabra.NET.Application.UseCases.Project.CreateProjectRole;
 using IbraHabra.NET.Application.UseCases.Project.DeleteProjectRole;
+using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -17,14 +19,15 @@ namespace IbraHabra.NET.Adapter.Controller;
 /// ProjectRoles are scoped to individual projects and can have permissions
 /// </summary>
 [ApiController]
-[Route("api/admin/projects/{projectId}/roles")]
+[Route("v{version:apiVersion}/api/admin/projects/{projectId}/roles")]
 [Authorize(Policy = "AdminOnly")]
-[EnableCors("AdminPolicy")] 
+[EnableCors("AdminPolicy")]
+[ApiVersion("1.0")]
 public class AdminProjectRolesController : BaseApiController
 {
-    private readonly ICommandBus _bus;
+    private readonly IMessageBus _bus;
 
-    public AdminProjectRolesController(ICommandBus bus)
+    public AdminProjectRolesController(IMessageBus bus)
     {
         _bus = bus;
     }

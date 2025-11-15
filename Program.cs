@@ -11,20 +11,20 @@ builder.Host.AddWolverineConfig();
 // builder.Host.AddLoggerConfig();
 var config = builder.Configuration;
 var env = builder.Environment;
-builder.Services.AddEnvBoundValues(config);
-builder.Services.AddCachingConfig(config);
 builder.Services.AddCorsPolicyConfig();
 builder.Services.AddApiVersioningConfig();
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddProblemDetails();
 builder.Services.AddFluentConfig();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddEnvBoundValues(config);
+builder.Services.AddCachingConfig(config);
 builder.Services.AddDatabaseConfig(config);
 builder.Services.AddOpenIdDictConfig(config, env);
+builder.Services.AddIdentityConfig(config);
 builder.Services.AddScalarConfig();
 builder.Services.RegisterRepo();
 builder.Services.RegisterServices();
-builder.Services.AddIdentityConfig(config);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 
@@ -42,6 +42,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<SecurityMiddleware>();
 app.UseExceptionHandler();
 app.UseStaticFiles();
 app.UseRouting();

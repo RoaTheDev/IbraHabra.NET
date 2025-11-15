@@ -18,7 +18,7 @@ public class LogoutAdminHandler : IWolverineHandler
     public static async Task<ApiResult> Handle(
         LogoutAdminCommand command,
         IHttpContextAccessor httpContextAccessor,
-        IRefreshTokenService refreshTokenService,
+        ITokenService tokenService,
         IOptions<JwtOptions> jwtOptions)
     {
         var context = httpContextAccessor.HttpContext!;
@@ -48,11 +48,14 @@ public class LogoutAdminHandler : IWolverineHandler
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
                 var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
 
-                if (userIdClaim != null &&
-                    Guid.TryParse(userIdClaim.Value, out var userId) &&
-                    context.Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
                 {
-                    await refreshTokenService.RevokeAsync(userId, refreshToken);
+                    await tokenService.BlacklistAccessTokenAsync(userId, token);
+
+                    if (context.Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                    {
+                        await tokenService.RevokeAsync(userId, refreshToken);
+                    }
                 }
             }
             catch (SecurityTokenException)
@@ -61,8 +64,8 @@ public class LogoutAdminHandler : IWolverineHandler
             }
         }
 
-        refreshTokenService.ClearRefreshTokenCookie(context);
-
+        tokenService.ClearRefreshTokenCookie(context);
+        tokenService.ClearAccessTokenCookie(context);
         return ApiResult.Ok();
     }
 }

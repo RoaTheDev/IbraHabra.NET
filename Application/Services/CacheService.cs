@@ -30,12 +30,10 @@ public class CacheService : ICacheService
         _useRedis = options.Value.UseRedis && redisCache != null;
     }
 
-   public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, bool sliding = false)
+   public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, bool sliding = false)
 {
-    // Serialize once for both caches
     var serialized = JsonSerializer.Serialize(value);
     
-    // Store JSON string in memory cache
     var cacheOptions = new MemoryCacheEntryOptions();
     if (expiration.HasValue)
     {
@@ -45,9 +43,8 @@ public class CacheService : ICacheService
             cacheOptions.SetAbsoluteExpiration(expiration.Value);
     }
 
-    _memoryCache.Set(key, serialized, cacheOptions); // ✅ Store as string
+    _memoryCache.Set(key, serialized, cacheOptions);
 
-    // Fire-and-forget Redis update with short timeout
     if (_redisCache != null)
     {
         _ = Task.Run(async () =>
@@ -73,6 +70,8 @@ public class CacheService : ICacheService
             }
         });
     }
+
+    return Task.CompletedTask;
 }
 
 public async Task<T?> GetAsync<T>(string key)
@@ -127,15 +126,4 @@ public async Task<T?> GetAsync<T>(string key)
         _memoryCache.Remove(key);
     }
 
-    private void SetInMemoryCache(string key, string json, TimeSpan expiration, bool sliding)
-    {
-        var memoryOptions = new MemoryCacheEntryOptions();
-
-        if (sliding)
-            memoryOptions.SlidingExpiration = expiration;
-        else
-            memoryOptions.AbsoluteExpirationRelativeToNow = expiration;
-
-        _memoryCache.Set(key, json, memoryOptions);
-    }
 }

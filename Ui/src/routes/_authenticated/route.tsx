@@ -53,7 +53,6 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/auth/2fa' })
     }
 
-
     if (typeof window !== 'undefined') {
       const lastVerified = sessionUtils.get<string>(
         clientCacheKeys.last_verified_session,

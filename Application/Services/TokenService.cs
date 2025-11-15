@@ -8,16 +8,17 @@ public class TokenService : ITokenService
 {
     private readonly ICacheService _cache;
     private const string RefreshCacheKeyPrefix = "refresh:";
-    private const string AccessCacheKeyPrefix = "access:";
+    private const string BlacklistCacheKeyPrefix = "blacklist:";
     private const string RefreshCookieName = "refreshToken";
     private const string AccessCookieName = "accessToken";
     private const int RefreshTokenExpirationDays = 7;
-    private const int AccessTokenExpirationHours = 8;
+    private const int AccessTokenExpirationHours = 1;
 
     public TokenService(ICacheService cache)
     {
         _cache = cache;
     }
+
 
     public async Task<string> GenerateAndStoreAsync(Guid userId)
     {
@@ -48,21 +49,25 @@ public class TokenService : ITokenService
         await _cache.RemoveAsync($"{RefreshCacheKeyPrefix}{userId}:{refreshToken}");
     }
 
-    public async Task StoreAccessTokenHashAsync(Guid userId, string accessToken)
+
+
+    public async Task BlacklistAccessTokenAsync(Guid userId, string accessToken)
     {
         var hash = HashToken(accessToken);
         await _cache.SetAsync(
-            $"{AccessCacheKeyPrefix}{userId}:{hash}",
+            $"{BlacklistCacheKeyPrefix}{userId}:{hash}",
             true,
             TimeSpan.FromHours(AccessTokenExpirationHours));
     }
 
-    public async Task<bool> ValidateAccessTokenHashAsync(Guid userId, string accessToken)
+    public async Task<bool> IsAccessTokenBlacklistedAsync(Guid userId, string accessToken)
     {
         var hash = HashToken(accessToken);
-        var cacheKey = $"{AccessCacheKeyPrefix}{userId}:{hash}";
+        var cacheKey = $"{BlacklistCacheKeyPrefix}{userId}:{hash}";
         return await _cache.GetAsync<bool>(cacheKey);
     }
+
+
 
     public void SetRefreshTokenCookie(HttpContext context, string refreshToken)
     {
@@ -118,6 +123,8 @@ public class TokenService : ITokenService
         });
     }
 
+
+
     private static string GenerateSecureToken()
     {
         var randomBytes = new byte[64];
@@ -132,5 +139,5 @@ public class TokenService : ITokenService
         var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
         return Convert.ToBase64String(hashBytes);
     }
-}
 
+}

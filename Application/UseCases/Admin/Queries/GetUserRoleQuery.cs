@@ -8,29 +8,31 @@ namespace IbraHabra.NET.Application.UseCases.Admin.Queries;
 
 public record GetUserRolesQuery(Guid UserId);
 
+public record UserRoleResponse(Guid RoleId, string RoleName);
+
 public class GetUserRolesHandler : IWolverineHandler
 {
-    public static async Task<ApiResult<List<RoleResponse>>> Handle(
+    public static async Task<ApiResult<List<UserRoleResponse>>> Handle(
         GetUserRolesQuery query,
         UserManager<User> userManager,
         RoleManager<Role> roleManager)
     {
         var user = await userManager.FindByIdAsync(query.UserId.ToString());
         if (user == null)
-            return ApiResult<List<RoleResponse>>.Fail(ApiErrors.User.NotFound());
+            return ApiResult<List<UserRoleResponse>>.Fail(ApiErrors.User.NotFound());
 
         var roleNames = await userManager.GetRolesAsync(user);
-        var roles = new List<RoleResponse>();
+        var roles = new List<UserRoleResponse>();
 
         foreach (var roleName in roleNames)
         {
             var role = await roleManager.FindByNameAsync(roleName);
             if (role != null)
             {
-                roles.Add(new RoleResponse(role.Id, role.Name!, role.CreatedAt));
+                roles.Add(new UserRoleResponse(role.Id, role.Name!));
             }
         }
 
-        return ApiResult<List<RoleResponse>>.Ok(roles);
+        return ApiResult<List<UserRoleResponse>>.Ok(roles);
     }
 }

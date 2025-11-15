@@ -10,7 +10,6 @@ namespace IbraHabra.NET.Application.UseCases.Admin.Queries;
 // DTOs
 public record RoleResponse(Guid RoleId, string RoleName, DateTime CreatedAt);
 
-public record UserRoleResponse(Guid UserId, string Email, string? FirstName, string? LastName);
 
 // Get all roles
 public record GetAllRolesQuery();

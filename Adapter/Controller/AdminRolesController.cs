@@ -1,6 +1,8 @@
+using Asp.Versioning;
 using IbraHabra.NET.Application.Dto;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.AssignRole;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
+using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -13,14 +15,15 @@ namespace IbraHabra.NET.Adapter.Controller;
 /// These are Identity roles, not project-specific roles
 /// </summary>
 [ApiController]
-[Route("api/admin/roles")]
+[Route("v{version:apiVersion}/api/admin/roles")]
 [Authorize(Policy = "AdminOnly")]
 [EnableCors("AdminPolicy")]
+[ApiVersion("1.0")]
 public class AdminRolesController : BaseApiController
 {
-    private readonly ICommandBus _bus;
+    private readonly IMessageBus _bus;
 
-    public AdminRolesController(ICommandBus bus)
+    public AdminRolesController(IMessageBus bus)
     {
         _bus = bus;
     }
@@ -49,7 +52,7 @@ public class AdminRolesController : BaseApiController
     /// <summary>
     /// Get a specific role by ID
     /// </summary>
-    [HttpGet("{roleId}")]
+    [HttpGet("{roleId:guid}")]
     public async Task<IActionResult> GetRole([FromRoute] Guid roleId)
     {
         var result = await _bus.InvokeAsync<ApiResult<RoleResponse>>(new GetRoleByIdQuery(roleId));
@@ -84,7 +87,7 @@ public class AdminRolesController : BaseApiController
     [HttpGet("{roleId}/users")]
     public async Task<IActionResult> GetUsersInRole([FromRoute] Guid roleId)
     {
-        var result = await _bus.InvokeAsync<ApiResult<List<UserRoleResponse>>>(new GetUsersInRoleQuery(roleId));
+        var result = await _bus.InvokeAsync<ApiResult<List<UserInRoleResponse>>>(new GetUsersInRoleQuery(roleId));
         return FromApiResult(result);
     }
 
@@ -94,7 +97,7 @@ public class AdminRolesController : BaseApiController
     [HttpGet("users/{userId}")]
     public async Task<IActionResult> GetUserRoles([FromRoute] Guid userId)
     {
-        var result = await _bus.InvokeAsync<ApiResult<List<RoleResponse>>>(new GetUserRolesQuery(userId));
+        var result = await _bus.InvokeAsync<ApiResult<List<UserRoleResponse>>>(new GetUserRolesQuery(userId));
         return FromApiResult(result);
     }
 }

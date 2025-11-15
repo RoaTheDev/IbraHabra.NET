@@ -9,6 +9,8 @@ using IbraHabra.NET.Application.UseCases.Admin.Commands.LoginAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.RefreshAdminToken;
 using IbraHabra.NET.Application.UseCases.Admin.Commands.Verify2FaAdmin;
 using IbraHabra.NET.Application.UseCases.Admin.Queries;
+using IbraHabra.NET.Domain.Constants;
+using IbraHabra.NET.Domain.Contract;
 using IbraHabra.NET.Infra.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -115,23 +117,12 @@ public class AdminAuthController : BaseApiController
         return FromApiResult(result);
     }
 
-    /// <summary>
-    /// Refresh admin JWT token
-    /// </summary>
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<IActionResult> RefreshToken()
     {
-        var authHeader = HttpContext.Request.Headers.Authorization.ToString();
-        var token = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? authHeader.Substring("Bearer ".Length).Trim()
-            : null;
-
-        if (string.IsNullOrEmpty(token))
-            return Unauthorized(new { message = "No token provided" });
-
-        var result = await _bus.InvokeAsync<ApiResult<RefreshAdminTokenResponse>>(
-            new RefreshAdminTokenCommand(token));
+        var result = await _bus.InvokeAsync<ApiResult>(
+            new RefreshAdminTokenCommand());
 
         return FromApiResult(result);
     }

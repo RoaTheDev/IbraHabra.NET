@@ -111,21 +111,21 @@ public static class ExternalServicesRegistry
                     using var connection = ConnectionMultiplexer.Connect(
                         redisOptions.RedisConnectionString + ",abortConnect=false,connectTimeout=500"
                     );
-                    Console.WriteLine("✅ Redis connected successfully");
+                    Console.WriteLine("Redis connected successfully");
                 }
                 catch
                 {
-                    Console.WriteLine("⚠️ Redis unavailable - falling back to in-memory cache");
+                    Console.WriteLine(" Redis unavailable - falling back to in-memory cache");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Redis setup failed: {ex.Message} - using in-memory cache only");
+                Console.WriteLine($"Redis setup failed: {ex.Message} - using in-memory cache only");
             }
         }
         else
         {
-            Console.WriteLine("ℹ️ Redis disabled - using in-memory cache only");
+            Console.WriteLine(" Redis disabled - using in-memory cache only");
         }
 
         services.AddScoped<ICacheService, CacheService>();
@@ -139,4 +139,6 @@ public static class ExternalServicesRegistry
 
     public static void AddCorsPolicyConfig(this IServiceCollection services) =>
         services.AddScoped<ICorsPolicyProvider, DynamicCorsPolicyProvider>();
+
+   
 }

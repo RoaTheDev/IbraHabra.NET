@@ -23,7 +23,6 @@ const config = defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', '@tanstack/react-router', 'zod'],
-          // utilities: ['@/domains/patients/usePatientHooks.ts', '@/domains/patients/patientSchemas.ts'],
         },
       },
     },

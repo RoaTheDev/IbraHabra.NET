@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using IbraHabra.NET.Domain.Contract;
@@ -22,7 +24,6 @@ public static class AppPolicyExtension
     {
         var jwt = config.GetSection("JWT").Get<JwtOptions>() ?? null;
         var settings = config.GetSection("IDENTITY").Get<IdentitySettingOptions>() ?? null;
-
 
         services.AddIdentity<User, Role>(options =>
             {
@@ -57,13 +58,50 @@ public static class AppPolicyExtension
 
                 services.AddAuthentication(options =>
                     {
-                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultAuthenticateScheme = "CookieJwtBearer";
+                        options.DefaultChallengeScheme = "CookieJwtBearer";
                     })
-                    .AddJwtBearer(options =>
+                    .AddJwtBearer("CookieJwtBearer", options =>
                     {
                         options.RequireHttpsMetadata = jwt.RequireHttps;
                         options.SaveToken = true;
+
+                        options.Events = new JwtBearerEvents
+                        {
+                            OnMessageReceived = context =>
+                            {
+                                var accessToken = context.Request.Cookies["accessToken"];
+
+                                if (!string.IsNullOrEmpty(accessToken))
+                                {
+                                    context.Token = accessToken;
+                                }
+
+                                return Task.CompletedTask;
+                            },
+                            OnTokenValidated = async context =>
+                            {
+                                var tokenService =
+                                    context.HttpContext.RequestServices.GetRequiredService<ITokenService>();
+
+                                if (context.SecurityToken is JwtSecurityToken token)
+                                {
+                                    var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier);
+                                    if (userIdClaim != null)
+                                    {
+                                        var userId = Guid.Parse(userIdClaim.Value);
+                                        var isBlacklisted =
+                                            await tokenService.IsAccessTokenBlacklistedAsync(userId, token.RawData);
+
+                                        if (isBlacklisted)
+                                        {
+                                            context.Fail("Token is blacklisted");
+                                        }
+                                    }
+                                }
+                            }
+                        };
+
                         options.TokenValidationParameters = new TokenValidationParameters
                         {
                             ValidateIssuerSigningKey = true,
@@ -83,7 +121,7 @@ public static class AppPolicyExtension
         {
             options.AddPolicy("AdminOnly", policy =>
             {
-                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.AuthenticationSchemes.Add("CookieJwtBearer");
                 policy.RequireRole("Admin", "Super");
             });
 
@@ -190,14 +228,11 @@ public static class AppPolicyExtension
             })
             .AddValidation(opts =>
             {
-                // Import the configuration from the local OpenIddict server instance
                 opts.UseLocalServer();
 
-                // Register the ASP.NET Core host
                 opts.UseAspNetCore();
             });
 
-        // PRODUCTION: Add rate limiting
         if (env.IsProduction())
         {
             AddRateLimiting(services);
@@ -539,7 +574,6 @@ public static class AppPolicyExtension
                     }
                 }
 
-                // For confidential clients, no PKCE check—proceed normally
             }));
     }
 }

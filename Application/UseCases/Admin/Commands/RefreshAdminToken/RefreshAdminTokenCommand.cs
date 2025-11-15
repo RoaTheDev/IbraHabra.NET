@@ -14,35 +14,36 @@ using Wolverine;
 
 namespace IbraHabra.NET.Application.UseCases.Admin.Commands.RefreshAdminToken;
 
-public record RefreshAdminTokenCommand(string Token);
+public record RefreshAdminTokenCommand;
 
-public record RefreshAdminTokenResponse(
-    string Token,
-    DateTime ExpiresAt);
 
 public class RefreshAdminTokenHandler : IWolverineHandler
 {
-    public static async Task<ApiResult<RefreshAdminTokenResponse>> Handle(
+    public static async Task<ApiResult> Handle(
         RefreshAdminTokenCommand command,
         UserManager<User> userManager,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
-        IRefreshTokenService refreshTokenService)
+        ITokenService tokenService)
     {
         var context = httpContextAccessor.HttpContext!;
-
         if (!context.Request.Cookies.TryGetValue("refreshToken", out var refreshToken)
             || string.IsNullOrEmpty(refreshToken))
         {
-            return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authentication.InvalidToken());
+            return ApiResult.Fail(
+                ApiErrors.Authentication.InvalidToken());
+        }
+
+        if (!context.Request.Cookies.TryGetValue("accessToken", out var accessToken)
+            || string.IsNullOrEmpty(accessToken))
+        {
+            return ApiResult.Fail(
+                ApiErrors.Authentication.InvalidToken());
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwt = jwtOptions.Value;
-        var jwtSecret = jwt.Secret;
-
-
-        var key = Encoding.UTF8.GetBytes(jwtSecret);
+        var key = Encoding.UTF8.GetBytes(jwt.Secret);
 
         try
         {
@@ -58,37 +59,41 @@ public class RefreshAdminTokenHandler : IWolverineHandler
                 ClockSkew = TimeSpan.Zero
             };
 
-            var principal = tokenHandler.ValidateToken(command.Token, validationParameters, out _);
+            var principal = tokenHandler.ValidateToken(accessToken, validationParameters, out _);
 
             var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authentication.InvalidToken());
+                return ApiResult.Fail(
+                    ApiErrors.Authentication.InvalidToken());
 
-            var isValid = await refreshTokenService.ValidateAndConsumeAsync(userId, refreshToken);
+            var isValid = await tokenService.ValidateAndConsumeAsync(userId, refreshToken);
             if (!isValid)
-                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authentication.InvalidToken());
+                return ApiResult.Fail(
+                    ApiErrors.Authentication.InvalidToken());
 
             var user = await userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.User.NotFound());
+                return ApiResult.Fail(ApiErrors.User.NotFound());
 
             var roles = await userManager.GetRolesAsync(user);
             if (!roles.Contains("Admin") && !roles.Contains("Super"))
-                return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
+                return ApiResult.Fail(
+                    ApiErrors.Authorization.InsufficientPermissions());
+
+            await tokenService.BlacklistAccessTokenAsync(userId, accessToken);
 
             var newToken = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
-            var expiresAt = DateTime.UtcNow.AddHours(8);
 
-            var newRefreshToken = await refreshTokenService.GenerateAndStoreAsync(user.Id);
-            refreshTokenService.SetRefreshTokenCookie(context, newRefreshToken);
+            var newRefreshToken = await tokenService.GenerateAndStoreAsync(user.Id);
+            tokenService.SetAccessTokenCookie(context, newToken);
+            tokenService.SetRefreshTokenCookie(context, newRefreshToken);
 
-            return ApiResult<RefreshAdminTokenResponse>.Ok(new RefreshAdminTokenResponse(
-                Token: newToken,
-                ExpiresAt: expiresAt));
+            return ApiResult.Ok();
         }
         catch (SecurityTokenException)
         {
-            return ApiResult<RefreshAdminTokenResponse>.Fail(ApiErrors.Authentication.InvalidToken());
+            return ApiResult.Fail(
+                ApiErrors.Authentication.InvalidToken());
         }
     }
 }

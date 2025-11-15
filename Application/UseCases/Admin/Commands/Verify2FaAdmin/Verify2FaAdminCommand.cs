@@ -14,9 +14,7 @@ public record Verify2FaAdminCommand(string Session2Fa, string Code);
 
 public record Verify2FaAdminCommandResponse(
     Guid UserId,
-    string Email,
-    string Token,
-    DateTime ExpiresAt);
+    string Email);
 
 public class Verify2FaAdminHandler : IWolverineHandler
 {
@@ -26,12 +24,14 @@ public class Verify2FaAdminHandler : IWolverineHandler
         ICacheService cache,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
-        IRefreshTokenService refreshTokenService)
+        ITokenService tokenService)
     {
         var cachedEmail = await cache.GetAsync<string>($"2fa:{command.Session2Fa}");
         await cache.RemoveAsync($"2fa:{command.Session2Fa}");
+
         if (cachedEmail == null)
-            return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.Authentication.InvalidSession());
+            return ApiResult<Verify2FaAdminCommandResponse>.Fail(
+                ApiErrors.Authentication.InvalidSession());
 
         var user = await userManager.FindByEmailAsync(cachedEmail);
         if (user == null)
@@ -39,7 +39,8 @@ public class Verify2FaAdminHandler : IWolverineHandler
 
         var roles = await userManager.GetRolesAsync(user);
         if (!roles.Contains("Admin") && !roles.Contains("Super"))
-            return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
+            return ApiResult<Verify2FaAdminCommandResponse>.Fail(
+                ApiErrors.Authorization.InsufficientPermissions());
 
         var isValid = await userManager.VerifyTwoFactorTokenAsync(
             user,
@@ -59,21 +60,21 @@ public class Verify2FaAdminHandler : IWolverineHandler
                     ApiErrors.User.AccountLocked(Convert.ToInt32(remainingMinutes)));
             }
 
-            return ApiResult<Verify2FaAdminCommandResponse>.Fail(ApiErrors.User.InvalidTwoFactorCode());
+            return ApiResult<Verify2FaAdminCommandResponse>.Fail(
+                ApiErrors.User.InvalidTwoFactorCode());
         }
 
         await cache.RemoveAsync($"2fa:{command.Session2Fa}");
         await userManager.ResetAccessFailedCountAsync(user);
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
-        var expiresAt = DateTime.UtcNow.AddHours(8);
-        var refreshToken = await refreshTokenService.GenerateAndStoreAsync(user.Id);
-        refreshTokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
+
+        var refreshToken = await tokenService.GenerateAndStoreAsync(user.Id);
+        tokenService.SetAccessTokenCookie(httpContextAccessor.HttpContext!, token);
+        tokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
 
         return ApiResult<Verify2FaAdminCommandResponse>.Ok(new Verify2FaAdminCommandResponse(
             UserId: user.Id,
-            Email: user.Email!,
-            Token: token,
-            ExpiresAt: expiresAt));
+            Email: user.Email!));
     }
 }

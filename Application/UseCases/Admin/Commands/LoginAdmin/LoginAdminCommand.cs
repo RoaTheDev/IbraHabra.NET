@@ -15,22 +15,18 @@ public record LoginAdminCommand(string Email, string Password);
 public record LoginAdminCommandResponse(
     Guid UserId,
     string Email,
-    string Token,
-    DateTime ExpiresAt,
     bool RequiresTwoFactor = false,
     string? Session2Fa = null);
 
 public class LoginAdminHandler : IWolverineHandler
 {
-// Option 1: Don't use SignInManager at all (BEST for pure JWT APIs)
     public static async Task<ApiResult<LoginAdminCommandResponse>> Handle(
         LoginAdminCommand command,
         UserManager<User> userManager,
         ICacheService cache,
         IOptions<JwtOptions> jwtOptions,
         IHttpContextAccessor httpContextAccessor,
-        IRefreshTokenService refreshTokenService
-    )
+        ITokenService tokenService)
     {
         var user = await userManager.FindByEmailAsync(command.Email);
         if (user == null)
@@ -38,7 +34,8 @@ public class LoginAdminHandler : IWolverineHandler
 
         var roles = await userManager.GetRolesAsync(user);
         if (!roles.Contains("Admin") && !roles.Contains("Super"))
-            return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.Authorization.InsufficientPermissions());
+            return ApiResult<LoginAdminCommandResponse>.Fail(
+                ApiErrors.Authorization.InsufficientPermissions());
 
         if (!await userManager.CheckPasswordAsync(user, command.Password))
         {
@@ -52,7 +49,8 @@ public class LoginAdminHandler : IWolverineHandler
                     ApiErrors.User.AccountLocked(Convert.ToInt32(remainingMinutes)));
             }
 
-            return ApiResult<LoginAdminCommandResponse>.Fail(ApiErrors.Authentication.InvalidCredentials());
+            return ApiResult<LoginAdminCommandResponse>.Fail(
+                ApiErrors.Authentication.InvalidCredentials());
         }
 
         await userManager.ResetAccessFailedCountAsync(user);
@@ -65,22 +63,19 @@ public class LoginAdminHandler : IWolverineHandler
             return ApiResult<LoginAdminCommandResponse>.Ok(new LoginAdminCommandResponse(
                 UserId: Guid.Empty,
                 Email: "default@ibrahara.com",
-                Token: string.Empty,
-                ExpiresAt: DateTime.UtcNow,
                 RequiresTwoFactor: true,
                 Session2Fa: session2Fa));
         }
 
         var token = await JwtGen.GenerateJwtToken(user, userManager, jwtOptions);
-        var expiresAt = DateTime.UtcNow.AddHours(1);
+        var expiresAt = DateTime.UtcNow.AddHours(8);
 
-        var refreshToken = await refreshTokenService.GenerateAndStoreAsync(user.Id);
-        refreshTokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
+        var refreshToken = await tokenService.GenerateAndStoreAsync(user.Id);
+        tokenService.SetAccessTokenCookie(httpContextAccessor.HttpContext!, token);
+        tokenService.SetRefreshTokenCookie(httpContextAccessor.HttpContext!, refreshToken);
 
         return ApiResult<LoginAdminCommandResponse>.Ok(new LoginAdminCommandResponse(
             UserId: user.Id,
-            Email: user.Email!,
-            Token: token,
-            ExpiresAt: expiresAt));
+            Email: user.Email!));
     }
 }
